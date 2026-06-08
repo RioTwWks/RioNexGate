@@ -1,0 +1,16 @@
+{
+  "folders": ["backend", "frontend", "nginx", "scripts"],
+  "languages": {
+    "go": "1.21",
+    "typescript": "5.0",
+    "yaml": "recommended"
+  },
+  "tasks": {
+    "build": "make build",
+    "dev": "make dev",
+    "test": "make test"
+  },
+  "env": {
+    "GO_ENV": "development"
+  }
+}
