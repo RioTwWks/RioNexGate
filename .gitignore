@@ -1,0 +1,147 @@
+# ----------------------
+#  Go
+# ----------------------
+# Скомпилированные бинарники
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/proxy-mgr
+/backend/proxy-mgr
+
+# Файлы отладки и покрытия
+*.prof
+*.cov
+*.log
+
+# Go workspace
+go.work
+go.work.sum
+
+# Зависимости (vendor — если используется)
+vendor/
+
+# ----------------------
+#  Node.js / React
+# ----------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Сборка фронтенда
+/dist
+/frontend/dist
+/frontend/build
+
+# Кэши
+.eslintcache
+.parcel-cache/
+.next/
+.nuxt/
+.cache/
+
+# ----------------------
+#  Общие для IDE и редакторов
+# ----------------------
+# VSCode
+.vscode/
+*.code-workspace
+.history/
+
+# IntelliJ / WebStorm / GoLand
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-*
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+*~
+*.un~
+
+# ----------------------
+#  Docker / Контейнеры
+# ----------------------
+# Docker Compose переопределения (исключаем все override файлы)
+docker-compose.override.yml
+docker-compose.*.yml
+
+# Образы и кэши Docker (обычно не в репозитории)
+*.tar
+*.tar.gz
+docker-build.log
+
+# ----------------------
+#  Данные приложения и временные файлы
+# ----------------------
+/data/               # SQLite, конфиги ядер, логи, сертификаты (все данные)
+/data/*
+!.gitkeep           # можно сохранить пустой .gitkeep, чтобы папка существовала
+
+# Логи приложения
+*.log
+logs/
+*.pid
+
+# Секреты и конфиги с паролями
+.env
+.env.local
+.env.*.local
+backend/config.yaml   # содержит API-ключи и токены
+backend/config.yml
+*.secret
+*.key
+*.pem
+*.crt
+!examples/*.pem       # примеры сертификатов можно сохранить
+
+# ----------------------
+#  Системные файлы
+# ----------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.bak
+*.tmp
+*.temp
+
+# ----------------------
+#  Архивы и сборки
+# ----------------------
+*.zip
+*.tgz
+*.gz
+*.rar
+*.7z
+*.dmg
+
+# ----------------------
+#  Скрипты (если они генерируют временные данные)
+# ----------------------
+/scripts/*.tmp
+/scripts/*.bak
+
+# ----------------------
+#  Документация и покрытие (если генерируются позже)
+# ----------------------
+/backend/coverage.html
+/backend/coverage.out
+/frontend/coverage/
+
+# ----------------------
+#  Специфичное для Cursor (если нужно)
+# ----------------------
+# .cursor/ обычно хранит настройки, но можно исключить временные файлы
+.cursor/tmp/
+.cursor/*.log
