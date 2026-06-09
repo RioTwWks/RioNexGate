@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  api_key: "change-me-to-secure-key"   # тот же ключ вводится в веб-панели
+
+database:
+  path: "./data/proxy-mgr.db"
+
+core:
+  type: "xray"   # or "sing-box"
+  listen_port: 443
+  public_host: "127.0.0.1"            # хост в VLESS-ссылках (домен или IP)
+  stats_poll_seconds: 60
+  xray:
+    config_path: "./data/xray/config.json"
+    binary_path: "/usr/local/bin/xray"
+    api_address: "host.docker.internal:10085"
+  singbox:
+    config_path: "./data/sing-box/config.json"
+    binary_path: "/usr/local/bin/sing-box"
+    api_address: "127.0.0.1:9090"
+
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+  admin_ids: [123456789]
+
+limits:
+  default_traffic_gb: 50
+  default_expire_days: 30

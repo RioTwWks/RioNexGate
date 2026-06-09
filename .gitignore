@@ -98,7 +98,8 @@ logs/
 .env
 .env.local
 .env.*.local
-backend/config.yaml   # содержит API-ключи и токены
+# API-ключи и токены Telegram — только локально (шаблон: config.example.yaml)
+backend/config.yaml
 backend/config.yml
 *.secret
 *.key
@@ -145,3 +146,4 @@ Desktop.ini
 # .cursor/ обычно хранит настройки, но можно исключить временные файлы
 .cursor/tmp/
 .cursor/*.log
+.cursor/venv/
