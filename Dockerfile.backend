@@ -1,13 +1,16 @@
 FROM golang:1.21-alpine AS builder
+RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -o proxy-mgr ./cmd/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -o proxy-mgr ./cmd/main.go
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates wget
 WORKDIR /app
 COPY --from=builder /app/proxy-mgr .
-COPY --from=builder /app/config.yaml .
+COPY --from=builder /app/config.example.yaml ./config.yaml
+EXPOSE 8080
+HEALTHCHECK CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["./proxy-mgr"]

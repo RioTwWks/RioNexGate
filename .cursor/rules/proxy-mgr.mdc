@@ -1,0 +1,70 @@
+---
+description: Контекст проекта proxy-mgr — структура, стек, команды, деплой
+alwaysApply: true
+---
+
+# proxy-mgr
+
+Панель управления прокси на **Xray-core** / **sing-box**: Go backend, React frontend, Nginx, Docker Compose.
+
+**MVP реализован.** План и статус: [.cursor/plans/mvp.md](.cursor/plans/mvp.md).
+
+## Структура
+
+| Папка | Назначение |
+|-------|------------|
+| `backend/cmd/` | Точка входа, `migrate` subcommand |
+| `backend/internal/api/` | REST handlers, chi router, auth middleware |
+| `backend/internal/core/` | CoreManager, templates, links, QR |
+| `backend/internal/db/` | GORM репозиторий |
+| `backend/internal/telegram/` | Telegram-бот |
+| `frontend/src/` | React pages, components, `services/api.ts` |
+| `nginx/` | `nginx.conf` (reverse proxy), `default.conf` (SPA) |
+| `scripts/` | backup, docker-compose wrapper, docker-doctor |
+| `data/` | SQLite, конфиги ядер (в `.gitignore`) |
+
+## Стек
+
+- **Go 1.21+** — chi, viper, gorm+sqlite (CGO в Docker)
+- **TypeScript 5** — React 18, Vite, Tailwind, axios, recharts
+- **Docker Engine** + **docker compose** v2 plugin (не Python `docker-compose` v1)
+
+## Команды
+
+```bash
+make init          # config.yaml, .env, каталоги data/
+make dev           # сборка + docker compose up (foreground)
+make up            # detached
+make down          # остановить
+make dev-cores     # profile cores: xray-core + sing-box
+make dev-local     # без Docker (backend :8080, frontend :5173)
+make migrate       # миграция БД в контейнере backend
+make docker-doctor
+make test
+```
+
+## URL и порты (Docker)
+
+| URL | Сервис |
+|-----|--------|
+| http://localhost:8888 | Панель (nginx), `HTTP_PORT` в `.env` |
+| http://localhost:8888/api/* | Backend API |
+| http://localhost:3000 | Frontend напрямую (API не проксируется) |
+| http://localhost:8080 | Backend напрямую |
+
+Авторизация API и панели: заголовок `X-API-Key` = `server.api_key` из `backend/config.yaml`.
+
+## Окружение
+
+- Секреты: `backend/config.yaml`, `.env` (не коммитить)
+- После `usermod -aG docker` — перелогиниться; иначе `make` использует `sg docker`
+- `~/.docker/config.json` не должен содержать `"credsStore": "desktop"` (остаток Docker Desktop)
+- Использовать `docker compose`, не `docker-compose` v1
+
+## Соглашения
+
+- Backend: `cmd/` + `internal/` layout
+- После CRUD пользователей — `core.Reload()`
+- Frontend: при 401 очищать API key и редирект на `/login`
+- Nginx проксирует `X-API-Key` на backend
+- Конфиги ядер пишутся в `./data/xray/` и `./data/sing-box/`

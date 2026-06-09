@@ -1,23 +1,53 @@
-.PHONY: build run dev clean migrate
+# Запускать из корня репозитория: cd ~/proxy-mgr && make dev
+ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+DOCKER_COMPOSE := $(ROOT)scripts/docker-compose.sh
 
-build:
-	docker-compose build
+.PHONY: build up down dev dev-cores dev-local docker-doctor test clean migrate init logs docker-check
 
-up:
-	docker-compose up -d
+init:
+	cp -n backend/config.example.yaml backend/config.yaml 2>/dev/null || true
+	cp -n .env.example .env 2>/dev/null || true
+	mkdir -p data/xray data/sing-box data/nginx/ssl backups
+	@echo "Panel URL after make dev: http://localhost:$${HTTP_PORT:-8888}"
 
-down:
-	docker-compose down
+docker-check:
+	@$(ROOT)scripts/docker-check.sh
 
-dev:
-	docker-compose up --build
+docker-doctor:
+	@$(ROOT)scripts/docker-doctor.sh
 
-migrate:
-	docker-compose exec backend ./proxy-mgr migrate
+build: docker-check
+	$(DOCKER_COMPOSE) build
 
-logs:
-	docker-compose logs -f
+up: docker-check
+	$(DOCKER_COMPOSE) up -d
 
-clean:
-	docker-compose down -v
+down: docker-check
+	$(DOCKER_COMPOSE) down
+
+dev: docker-check
+	$(DOCKER_COMPOSE) up --build
+
+dev-cores: docker-check
+	$(DOCKER_COMPOSE) --profile cores up -d xray-core sing-box
+
+dev-local:
+	@echo "Local development without Docker:"
+	@echo "  Terminal 1: make -C backend dev    # API http://localhost:8080"
+	@echo "  Terminal 2: cd frontend && npm run dev   # UI http://localhost:5173"
+	@echo ""
+	@echo "Migrate DB first (once): make -C backend migrate"
+
+test:
+	cd backend && go test ./...
+	cd frontend && npm test --if-present
+
+migrate: docker-check
+	$(DOCKER_COMPOSE) exec backend ./proxy-mgr migrate
+
+logs: docker-check
+	$(DOCKER_COMPOSE) logs -f
+
+clean: docker-check
+	$(DOCKER_COMPOSE) down -v
 	rm -rf data/

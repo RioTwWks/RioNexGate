@@ -1,0 +1,51 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "api": {
+    "tag": "api",
+    "services": ["StatsService"],
+    "listen": "{{.APIAddress}}"
+  },
+  "stats": {},
+  "policy": {
+    "levels": {
+      "0": {
+        "statsUserUplink": true,
+        "statsUserDownlink": true
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true
+    }
+  },
+  "inbounds": [
+    {
+      "tag": "vless-in",
+      "port": {{.ListenPort}},
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+          {
+            "id": "{{$u.UUID}}",
+            "email": "{{$u.Email}}",
+            "level": 0
+          }
+{{- end}}
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
+}

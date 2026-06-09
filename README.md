@@ -1,117 +1,147 @@
-# proxy-mgr — универсальная панель управления прокси
+# proxy-mgr — панель управления прокси
 
-**proxy-mgr** — это лёгкая, самописная панель для управления прокси-серверами на базе **Xray-core** и **sing-box**. Проект включает веб-интерфейс (React), Telegram-бота и единый API на Go. Позволяет создавать пользователей, выдавать клиентские ссылки (VLESS, VMess, Trojan, Shadowsocks), отслеживать трафик и переключать ядро в один клик.
+**proxy-mgr** — панель для управления прокси на **Xray-core** и **sing-box**: Go API, React UI, Telegram-бот, Docker Compose.
+
+MVP реализован: пользователи, VLESS-ссылки, QR, трафик, переключение ядра.
 
 ## Возможности
 
-- Поддержка двух ядер: **Xray-core** и **sing-box** (переключение через конфиг или UI).
-- Управление пользователями (создание, удаление, лимиты по трафику и времени).
-- Генерация клиентских ссылок и QR-кодов.
-- Статистика использования трафика в реальном времени.
-- **Telegram-бот** для администратора: просмотр пользователей, выдача ключей, остатки трафика.
-- **REST API** с аутентификацией по API-ключу (можно интегрировать с биллингом).
-- **Nginx** как reverse-proxy для API и фронтенда.
-- Простой запуск через **Docker Compose**.
+- Два ядра: **xray** и **sing-box** (переключение в UI / API)
+- CRUD пользователей, лимиты трафика и срока действия
+- Клиентские ссылки и QR-коды (VLESS)
+- Дашборд со статистикой трафика
+- Telegram-бот для администратора
+- REST API с аутентификацией по API-ключу
+- Nginx как единая точка входа
 
 ## Требования
 
-- Linux / macOS / WSL2
-- Docker и Docker Compose (≥ 2.0)
-- Домен (опционально, для HTTPS)
-- Telegram Bot Token (можно получить у [@BotFather](https://t.me/botfather))
+- Linux (протестировано на Ubuntu 24.04)
+- **Docker Engine** + плагин **Docker Compose v2** (`docker compose`, не Python `docker-compose` v1)
+- Go 1.21+ и Node 18+ — только для локальной разработки без Docker
+
+### Установка Docker (Linux)
+
+```bash
+# Официальный репозиторий Docker — см. https://docs.docker.com/engine/install/ubuntu/
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
+# перелогиниться, чтобы группа docker применилась
+```
+
+Проверка:
+
+```bash
+docker compose version   # v2.x или v5.x
+make docker-doctor
+```
+
+> **Не используйте** устаревший пакет `docker-compose` v1 из apt (`sudo apt remove docker-compose`).  
+> После удаления Docker Desktop сбросьте `~/.docker/config.json`: `echo '{"auths":{}}' > ~/.docker/config.json`
 
 ## Быстрый старт
 
-### 1. Клонировать репозиторий
-
 ```bash
-git clone https://github.com/your-username/proxy-mgr.git
+git clone <repo-url> proxy-mgr
 cd proxy-mgr
+
+make init
 ```
 
-### 2. Создать конфигурационные файлы
+Отредактируйте файлы:
 
-Скопируйте примеры и отредактируйте под себя:
+- `backend/config.yaml` — обязательно смените `server.api_key`
+- `.env` — `HTTP_PORT`, `TELEGRAM_BOT_TOKEN` (опционально)
 
 ```bash
-cp backend/config.example.yaml backend/config.yaml
-cp .env.example .env
+make dev
 ```
 
-В `.env` укажите токен Telegram-бота и список администраторов (Telegram ID):
-
-```ini
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-ADMIN_IDS=123456789,987654321
-```
-
-В `backend/config.yaml` при необходимости измените порты, путь к БД, лимиты по умолчанию.
-
-### 3. Запустить через Docker Compose
+В другом терминале (первый запуск):
 
 ```bash
-docker-compose up -d
+make migrate
 ```
 
-В первый раз также нужно выполнить миграцию базы данных:
+### URL после запуска
+
+| URL | Описание |
+|-----|----------|
+| http://localhost:8888 | **Веб-панель** (nginx, порт из `HTTP_PORT`) |
+| http://localhost:8888/api/health | Health check API |
+| http://localhost:8080/api/health | Backend напрямую |
+| http://localhost:3000 | Frontend напрямую (без прокси API) |
+
+Войдите в панель с API-ключом из `backend/config.yaml` → `server.api_key`.
+
+Опционально — поднять ядра xray/sing-box:
 
 ```bash
-docker-compose exec backend ./proxy-mgr migrate
+make dev-cores
 ```
 
-### 4. Проверить работу
+## Makefile
 
-- Веб-интерфейс: [http://localhost](http://localhost) (или ваш домен)
-- API: [http://localhost/api/health](http://localhost/api/health)
-- Telegram-бот: отправьте `/start` — он ответит списком команд.
+| Команда | Действие |
+|---------|----------|
+| `make init` | Создать `config.yaml`, `.env`, каталоги `data/` |
+| `make dev` | Сборка и запуск (`docker compose up --build`) |
+| `make up` | Запуск в фоне |
+| `make down` | Остановить контейнеры |
+| `make dev-cores` | Запустить xray-core и sing-box (profile `cores`) |
+| `make dev-local` | Подсказка для запуска без Docker |
+| `make migrate` | Миграция БД в контейнере backend |
+| `make docker-doctor` | Проверка Docker |
+| `make test` | `go test` + `npm test` |
+| `make logs` | Логи compose |
+| `make clean` | Остановить и удалить volumes |
 
-## Использование
+## Веб-панель
 
-### Веб-панель
+1. Откройте http://localhost:8888
+2. Введите API-ключ из `backend/config.yaml`
+3. **Dashboard** — общий трафик и график
+4. **Users** — создание, редактирование, ссылки и QR
+5. **Settings** — переключение xray ↔ sing-box, reload ядра
 
-1. Авторизуйтесь с помощью API-ключа (по умолчанию `your-secure-api-key`, можно изменить в `config.yaml`).
-2. На дашборде отображается общий трафик и график использования.
-3. В разделе **Пользователи**:
-   - Добавьте нового пользователя (e‑mail, лимит трафика в ГБ, срок действия).
-   - После создания нажмите **Получить ссылку** — появится строка подключения и QR-код.
-   - Редактируйте или удаляйте пользователей.
-4. В разделе **Настройки** можно переключить активное ядро (`xray` ↔ `sing-box`). После смены ядра конфигурация всех пользователей будет пересоздана автоматически.
+При ошибке 401: нажмите **Logout** или очистите `localStorage` (`proxy_mgr_api_key`).
 
-### Telegram-бот
+## Telegram-бот
 
-Команды для администратора:
+Настройте в `backend/config.yaml` или через `.env` (`TELEGRAM_BOT_TOKEN`).
 
-- `/users` — список пользователей (имя, остаток трафика, активен ли).
-- `/add <email> [traffic_gb] [expire_days]` — создать нового пользователя.  
-  Пример: `/add user@example.com 100 30`
-- `/link <user_id>` — получить клиентскую ссылку для пользователя.
-- `/traffic <user_id>` — показать использованный трафик.
-- `/reload` — принудительно перезагрузить конфиг ядра (после ручного вмешательства).
+| Команда | Описание |
+|---------|----------|
+| `/start` | Список команд |
+| `/users` | Список пользователей |
+| `/add <email> [gb] [days]` | Создать пользователя |
+| `/link <user_id>` | Ссылка подключения |
+| `/traffic <user_id>` | Использованный трафик |
+| `/reload` | Перегенерировать конфиг ядра |
 
-Бот понимает инлайн-кнопки: при вызове `/users` можно сразу перейти к управлению конкретным пользователем.
+## Конфигурация
 
-## Настройка
-
-### Структура конфигурационного файла `backend/config.yaml`
+### `backend/config.yaml`
 
 ```yaml
 server:
   port: 8080
-  api_key: "your-secure-api-key"
+  api_key: "change-me"          # ключ для панели и API
 
 database:
   path: "./data/proxy-mgr.db"
 
 core:
-  type: "xray"   # или "sing-box"
+  type: "xray"                  # или "sing-box"
+  listen_port: 443
+  public_host: "your.domain"    # для VLESS-ссылок
+  stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
-    binary_path: "/usr/local/bin/xray"
-    api_address: "127.0.0.1:10085"
+    api_address: "host.docker.internal:10085"
   singbox:
     config_path: "./data/sing-box/config.json"
-    binary_path: "/usr/local/bin/sing-box"
-    api_address: "127.0.0.1:10086"
+    api_address: "127.0.0.1:9090"
 
 telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"
@@ -122,109 +152,115 @@ limits:
   default_expire_days: 30
 ```
 
-### HTTPS и домен
+Пример без секретов: [`backend/config.example.yaml`](backend/config.example.yaml).
 
-Если у вас есть домен, настройте Nginx для автоматического получения SSL-сертификатов через Let's Encrypt:
+### `.env`
 
-1. Отредактируйте `nginx/nginx.conf`, добавив блок `server` с портом 443.
-2. Используйте `certbot` или образ `nginx-certbot`.  
-   Готовый пример можно найти в папке `examples/nginx-ssl.conf`.
+```ini
+HTTP_PORT=8888
+TELEGRAM_BOT_TOKEN=
+BACKUP_DIR=./backups
+```
 
-### Ручная сборка (без Docker)
-
-Если вы предпочитаете запускать без контейнеров:
-
-- **Backend**: `cd backend && go run cmd/main.go`
-- **Frontend**: `cd frontend && npm install && npm run dev`
-- **Xray / sing-box** установите на хост и укажите пути в конфиге.
+Порт **8888** по умолчанию — порт 80 часто занят системным nginx/apache.
 
 ## API
 
-Базовый адрес: `http://localhost/api`  
+Базовый URL: `http://localhost:8888/api`  
 Аутентификация: заголовок `X-API-Key: <api_key>`
 
-| Метод | Эндпоинт | Описание |
-|-------|----------|-----------|
-| GET | `/users` | Список всех пользователей |
-| POST | `/users` | Создать пользователя (JSON: `email, traffic_gb, expire_days`) |
-| GET | `/users/{id}` | Получить информацию о пользователе |
-| PUT | `/users/{id}` | Обновить лимиты |
-| DELETE | `/users/{id}` | Удалить пользователя |
-| GET | `/users/{id}/link?proto=vless` | Получить строку подключения |
-| GET | `/users/{id}/qr` | QR-код в формате PNG |
-| GET | `/stats/total` | Общая статистика трафика |
-| GET | `/stats/user/{id}` | Трафик конкретного пользователя |
-| POST | `/core/reload` | Перезагрузить активное ядро |
+```bash
+curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/health
+curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/users
+```
 
-Подробное описание (OpenAPI) будет доступно после запуска по адресу `/api/docs`.
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/health` | Health check (без auth) |
+| GET | `/users` | Список пользователей |
+| POST | `/users` | Создать пользователя |
+| GET/PUT/DELETE | `/users/{id}` | CRUD |
+| GET | `/users/{id}/link?proto=vless` | Строка подключения |
+| GET | `/users/{id}/qr` | QR-код (PNG) |
+| GET | `/stats/total` | Общая статистика |
+| GET | `/stats/user/{id}` | Трафик пользователя |
+| GET | `/core/type` | Активное ядро |
+| PUT | `/core/type` | Переключить ядро |
+| POST | `/core/reload` | Перезагрузить конфиг |
+
+## Локальная разработка (без Docker)
+
+```bash
+make init
+make -C backend migrate
+make -C backend dev          # API :8080
+
+cd frontend && npm install && npm run dev   # UI :5173, proxy /api → :8080
+```
 
 ## Структура проекта
 
 ```
 proxy-mgr/
-├── backend/                # Go-бэкенд
-│   ├── cmd/main.go         # точка входа
-│   ├── internal/           # внутренние пакеты (api, core, db, telegram)
-│   ├── config.yaml         # конфигурация
+├── backend/
+│   ├── cmd/main.go              # serve + migrate
+│   ├── internal/
+│   │   ├── api/                 # REST, chi, middleware
+│   │   ├── core/                # templates, CoreManager
+│   │   ├── db/                  # GORM
+│   │   ├── telegram/
+│   │   └── config/
+│   ├── config.example.yaml
 │   └── go.mod
-├── frontend/               # React-приложение (Vite + Tailwind)
-│   ├── src/
-│   ├── public/
-│   └── package.json
-├── nginx/                  # конфиги Nginx
-│   └── nginx.conf
-├── data/                   # монтируемые данные: БД, конфиги ядер, логи
-├── scripts/                # вспомогательные скрипты
+├── frontend/
+│   └── src/
+│       ├── pages/               # Login, Dashboard, Users, Settings
+│       ├── components/
+│       └── services/api.ts
+├── nginx/
+│   ├── nginx.conf               # reverse proxy
+│   └── default.conf             # SPA
+├── scripts/
+│   ├── docker-compose.sh        # compose v2 + sg docker
+│   ├── docker-doctor.sh
+│   ├── backup.sh
+│   └── restore.sh
+├── data/                        # SQLite, конфиги ядер (gitignored)
 ├── docker-compose.yml
 ├── Dockerfile.backend
 ├── Dockerfile.frontend
+├── Dockerfile.nginx
 ├── Makefile
-└── README.md
+└── .env.example
 ```
 
-## Разработка и доработка
-
-### Локальная разработка (горячая перезагрузка)
-
-```bash
-# Запустить только базу данных и ядра
-docker-compose up -d xray-core sing-box
-
-# Бэкенд в режиме разработки
-cd backend && go run cmd/main.go
-
-# Фронтенд (порт 5173)
-cd frontend && npm run dev
-```
-
-### Добавление нового протокола
-
-1. В `backend/internal/core/manager.go` добавьте генерацию конфига для нового протокола.
-2. Обновите API (эндпоинт `/users/{id}/link`).
-3. В фронтенде добавьте кнопку выбора протокола.
-
-### Создание резервных копий
+## Резервное копирование
 
 ```bash
 ./scripts/backup.sh
+./scripts/restore.sh backups/proxy-mgr-data-YYYYMMDD_HHMMSS.tar.gz
 ```
-
-Скрипт архивирует папку `data/` и выгружает в указанную директорию (настраивается в `.env`).
 
 ## Устранение неполадок
 
-- **Ошибка "cannot connect to xray-api"** — проверьте, что в `config.yaml` указан правильный `api_address` и что xray-core запущен с флагом `-api`.
-- **Telegram бот не отвечает** — убедитесь, что `bot_token` корректен и бот был добавлен в чат администратора.
-- **Пустая страница фронтенда** — откройте консоль браузера (F12) и проверьте, что API доступен и CORS не блокирует запросы (в Go-бэкенде CORS разрешён для всех источников в dev-режиме).
+| Симптом | Решение |
+|---------|---------|
+| `permission denied` (docker.sock) | `sudo usermod -aG docker $USER`, перелогиниться |
+| `docker-credential-desktop not found` | `echo '{"auths":{}}' > ~/.docker/config.json` |
+| `KeyError: 'id'` (compose) | Удалить `docker-compose` v1, использовать `docker compose` v2 |
+| Порт 80 занят | Используйте `HTTP_PORT=8888` в `.env` |
+| 401 в панели | Неверный API key; Logout или очистить `proxy_mgr_api_key` в localStorage |
+| `make dev` не видит docker | Перелогиниться после `usermod`; `make` использует `sg docker` как fallback |
+| xray stats не работают | `make dev-cores`, проверить `core.xray.api_address` |
+
+Диагностика: `make docker-doctor`
+
+## Документация для разработчиков
+
+- План MVP: [`.cursor/plans/mvp.md`](.cursor/plans/mvp.md)
+- Статус: [`.cursor/STATUS.md`](.cursor/STATUS.md)
+- Задачи: [`.cursor/tasks.md`](.cursor/tasks.md)
 
 ## Лицензия
 
-MIT License. Автор не несёт ответственности за использование данного ПО в странах, где VPN-технологии ограничены законодательством.
-
-## Благодарности
-
-- [Xray-core](https://github.com/XTLS/Xray-core)
-- [sing-box](https://github.com/SagerNet/sing-box)
-- [go-telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api)
-
----
+MIT License.
