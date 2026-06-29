@@ -40,3 +40,17 @@ func TestGenerateXrayConfig(t *testing.T) {
 		t.Fatalf("missing user in config: %s", body)
 	}
 }
+
+func TestGenerateSingboxConfig(t *testing.T) {
+	users := []models.User{
+		{UUID: "uuid-1", Email: "a@example.com"},
+	}
+	data, err := generateSingboxConfig(443, "127.0.0.1:9090", users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(data)
+	if !strings.Contains(body, "uuid-1") {
+		t.Fatalf("missing user in sing-box config: %s", body)
+	}
+}
