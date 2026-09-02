@@ -13,26 +13,30 @@ import (
 )
 
 type UserDTO struct {
-	ID        uint      `json:"id"`
-	UUID      string    `json:"uuid"`
-	Email     string    `json:"email"`
-	TrafficGB int64     `json:"traffic_gb"`
-	UsedGB    float64   `json:"used_gb"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          uint      `json:"id"`
+	UUID        string    `json:"uuid"`
+	Email       string    `json:"email"`
+	TrafficGB   int64     `json:"traffic_gb"`
+	UsedGB      float64   `json:"used_gb"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	Active      bool      `json:"active"`
+	EntryNodeID *uint     `json:"entry_node_id,omitempty"`
+	ExitNodeID  *uint     `json:"exit_node_id,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 func toUserDTO(u models.User) UserDTO {
 	return UserDTO{
-		ID:        u.ID,
-		UUID:      u.UUID,
-		Email:     u.Email,
-		TrafficGB: u.TrafficGB,
-		UsedGB:    float64(u.UsedBytes) / (1024 * 1024 * 1024),
-		ExpiresAt: u.ExpiresAt,
-		Active:    u.Active,
-		CreatedAt: u.CreatedAt,
+		ID:          u.ID,
+		UUID:        u.UUID,
+		Email:       u.Email,
+		TrafficGB:   u.TrafficGB,
+		UsedGB:      float64(u.UsedBytes) / (1024 * 1024 * 1024),
+		ExpiresAt:   u.ExpiresAt,
+		Active:      u.Active,
+		EntryNodeID: u.EntryNodeID,
+		ExitNodeID:  u.ExitNodeID,
+		CreatedAt:   u.CreatedAt,
 	}
 }
 
@@ -43,11 +47,14 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Email      *string    `json:"email"`
-	TrafficGB  *int64     `json:"traffic_gb"`
-	ExpireDays *int       `json:"expire_days"`
-	Active     *bool      `json:"active"`
-	ExpiresAt  *time.Time `json:"expires_at"`
+	Email       *string    `json:"email"`
+	TrafficGB   *int64     `json:"traffic_gb"`
+	ExpireDays  *int       `json:"expire_days"`
+	Active      *bool      `json:"active"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	EntryNodeID *uint      `json:"entry_node_id"`
+	ExitNodeID  *uint      `json:"exit_node_id"`
+	ClearChain  bool       `json:"clear_chain"`
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -112,10 +119,27 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := db.UpdateUserInput{
-		Email:     req.Email,
-		TrafficGB: req.TrafficGB,
-		Active:    req.Active,
-		ExpiresAt: req.ExpiresAt,
+		Email:       req.Email,
+		TrafficGB:   req.TrafficGB,
+		Active:      req.Active,
+		ExpiresAt:   req.ExpiresAt,
+		EntryNodeID: req.EntryNodeID,
+		ExitNodeID:  req.ExitNodeID,
+		ClearChain:  req.ClearChain,
+	}
+	if req.EntryNodeID != nil {
+		node, err := h.db.GetNode(*req.EntryNodeID)
+		if err != nil || node.Role != models.NodeRoleEntry {
+			writeError(w, http.StatusBadRequest, "invalid entry node")
+			return
+		}
+	}
+	if req.ExitNodeID != nil {
+		node, err := h.db.GetNode(*req.ExitNodeID)
+		if err != nil || node.Role != models.NodeRoleExit {
+			writeError(w, http.StatusBadRequest, "invalid exit node")
+			return
+		}
 	}
 	if req.ExpireDays != nil {
 		t := time.Now().AddDate(0, 0, *req.ExpireDays)

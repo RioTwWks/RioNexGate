@@ -47,7 +47,15 @@ func (d *DB) SeedDefaultNode() error {
 	if count > 0 {
 		return nil
 	}
-	return d.Create(&models.Node{Name: "default", Address: "127.0.0.1", Port: 443, Active: true}).Error
+	return d.Create(&models.Node{
+		Name:     "default",
+		Address:  "127.0.0.1",
+		Port:     443,
+		Active:   true,
+		Role:     models.NodeRoleEntry,
+		Protocol: "vless",
+		Priority: 100,
+	}).Error
 }
 
 func (d *DB) ListUsers() ([]models.User, error) {
@@ -107,10 +115,13 @@ func (d *DB) CreateUser(in CreateUserInput) (*models.User, error) {
 }
 
 type UpdateUserInput struct {
-	Email     *string
-	TrafficGB *int64
-	ExpiresAt *time.Time
-	Active    *bool
+	Email       *string
+	TrafficGB   *int64
+	ExpiresAt   *time.Time
+	Active      *bool
+	EntryNodeID *uint
+	ExitNodeID  *uint
+	ClearChain  bool
 }
 
 func (d *DB) UpdateUser(id uint, in UpdateUserInput) (*models.User, error) {
@@ -130,6 +141,17 @@ func (d *DB) UpdateUser(id uint, in UpdateUserInput) (*models.User, error) {
 	}
 	if in.Active != nil {
 		updates["active"] = *in.Active
+	}
+	if in.ClearChain {
+		updates["entry_node_id"] = nil
+		updates["exit_node_id"] = nil
+	} else {
+		if in.EntryNodeID != nil {
+			updates["entry_node_id"] = *in.EntryNodeID
+		}
+		if in.ExitNodeID != nil {
+			updates["exit_node_id"] = *in.ExitNodeID
+		}
 	}
 	if len(updates) > 0 {
 		if err := d.Model(user).Updates(updates).Error; err != nil {

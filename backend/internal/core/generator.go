@@ -14,10 +14,12 @@ import (
 var templateFS embed.FS
 
 type templateData struct {
-	ListenPort int
-	APIAddress string
-	Users      []models.User
-	Stealth    *config.StealthConfig
+	ListenPort  int
+	APIAddress  string
+	Users       []models.User
+	Stealth     *config.StealthConfig
+	Multihop    MultihopData
+	InboundTags []string
 }
 
 func renderTemplate(name string, data templateData) ([]byte, error) {
@@ -60,20 +62,23 @@ func jsonStringList(items []string) string {
 	return strings.Join(quoted, ", ")
 }
 
-func generateXrayConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig) ([]byte, error) {
+func generateXrayConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig, multihop MultihopData) ([]byte, error) {
 	return renderTemplate("xray.json.tmpl", templateData{
-		ListenPort: listenPort,
-		APIAddress: apiAddress,
-		Users:      users,
-		Stealth:    stealth,
+		ListenPort:  listenPort,
+		APIAddress:  apiAddress,
+		Users:       users,
+		Stealth:     stealth,
+		Multihop:    multihop,
+		InboundTags: CollectInboundTags(stealth, "vless-in"),
 	})
 }
 
-func generateSingboxConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig) ([]byte, error) {
+func generateSingboxConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig, multihop MultihopData) ([]byte, error) {
 	return renderTemplate("singbox.json.tmpl", templateData{
 		ListenPort: listenPort,
 		APIAddress: apiAddress,
 		Users:      users,
 		Stealth:    stealth,
+		Multihop:   multihop,
 	})
 }

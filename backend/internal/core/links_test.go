@@ -67,7 +67,7 @@ func TestGenerateXrayConfig(t *testing.T) {
 		{UUID: "uuid-1", Email: "a@example.com"},
 		{UUID: "uuid-2", Email: "b@example.com"},
 	}
-	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil)
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestGenerateSingboxConfig(t *testing.T) {
 	users := []models.User{
 		{UUID: "uuid-1", Email: "a@example.com"},
 	}
-	data, err := generateSingboxConfig(443, "127.0.0.1:9090", users, nil)
+	data, err := generateSingboxConfig(443, "127.0.0.1:9090", users, nil, MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}

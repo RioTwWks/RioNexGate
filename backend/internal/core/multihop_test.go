@@ -1,0 +1,122 @@
+package core
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"rionexgate/internal/config"
+	"rionexgate/internal/models"
+)
+
+func TestResolveClientEndpointUsesEntryNode(t *testing.T) {
+	entry := &models.Node{Address: "entry.ru.example", Port: 443}
+	ep := ResolveClientEndpoint("panel.local", 8080, models.User{}, entry)
+	if ep.Host != "entry.ru.example" || ep.Port != 443 {
+		t.Fatalf("unexpected endpoint: %+v", ep)
+	}
+}
+
+func TestBuildMultihopDataGeneratesOutbounds(t *testing.T) {
+	exit := models.Node{
+		ID:       2,
+		Name:     "exit-eu",
+		Address:  "exit.eu.example",
+		Port:     8443,
+		Role:     models.NodeRoleExit,
+		Protocol: "vless",
+		Credentials: `{"uuid":"relay-uuid","flow":"xtls-rprx-vision","security":"reality","public_key":"pk","short_id":"ab12"}`,
+	}
+	users := []models.User{{Email: "user@example.com", ExitNodeID: &exit.ID}}
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+
+	data := BuildMultihopData(multihop, users, []models.Node{exit}, func(u models.User) *models.Node {
+		return &exit
+	})
+	if !data.Enabled || len(data.Outbounds) != 1 {
+		t.Fatalf("expected one outbound, got %+v", data)
+	}
+	if data.Outbounds[0].Tag != "exit-exit-eu" {
+		t.Fatalf("unexpected tag: %s", data.Outbounds[0].Tag)
+	}
+	if len(data.Routings) != 1 || data.Routings[0].OutboundTag != "exit-exit-eu" {
+		t.Fatalf("unexpected routing: %+v", data.Routings)
+	}
+}
+
+func TestGenerateMultihopXrayConfig(t *testing.T) {
+	exit := models.Node{
+		ID:       2,
+		Name:     "exit-eu",
+		Address:  "exit.eu.example",
+		Port:     8443,
+		Role:     models.NodeRoleExit,
+		Protocol: "vless",
+		Credentials: `{"uuid":"relay-uuid","flow":"xtls-rprx-vision","security":"reality","public_key":"pk","short_id":"ab12"}`,
+	}
+	users := []models.User{{UUID: "u1", Email: "user@example.com"}}
+	multihop := BuildMultihopData(
+		&config.MultihopConfig{Enabled: true, LocalRole: "entry"},
+		users,
+		[]models.Node{exit},
+		func(models.User) *models.Node { return &exit },
+	)
+
+	raw, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, multihop)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(raw)
+	checks := []string{
+		`"tag": "exit-exit-eu"`,
+		`"address": "exit.eu.example"`,
+		`"protocol": "vless"`,
+		`"tag": "exit-exit-eu-chain"`,
+		`"proxySettings"`,
+		`"routing"`,
+		`"outboundTag": "exit-exit-eu-chain"`,
+	}
+	for _, c := range checks {
+		if !strings.Contains(body, c) {
+			t.Fatalf("missing %q in config:\n%s", c, body)
+		}
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+}
+
+func TestBuildSubscriptionUsesEntryNode(t *testing.T) {
+	user := models.User{
+		UUID:  "550e8400-e29b-41d4-a716-446655440000",
+		Email: "test@example.com",
+	}
+	entry := &models.Node{Address: "entry.ru.example", Port: 443}
+	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry)
+	if len(links) == 0 {
+		t.Fatal("expected links")
+	}
+	if !strings.Contains(links[0], "entry.ru.example") {
+		t.Fatalf("expected entry host in link, got %s", links[0])
+	}
+	if strings.Contains(links[0], "exit.eu") {
+		t.Fatal("exit node must not appear in client links")
+	}
+}
+
+func TestBuildClientConfigUsesEntryNode(t *testing.T) {
+	user := models.User{
+		UUID:  "550e8400-e29b-41d4-a716-446655440000",
+		Email: "test@example.com",
+	}
+	entry := &models.Node{Address: "entry.ru.example", Port: 443}
+	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Servers) == 0 || cfg.Servers[0].Host != "entry.ru.example" {
+		t.Fatalf("expected entry host in config, got %+v", cfg.Servers)
+	}
+}
