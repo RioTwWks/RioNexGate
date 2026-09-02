@@ -9,6 +9,8 @@ export interface User {
   created_at: string;
   subscription_token?: string;
   subscription_url?: string;
+  entry_node_id?: number;
+  exit_node_id?: number;
 }
 
 export interface StatsPoint {

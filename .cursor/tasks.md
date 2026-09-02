@@ -226,7 +226,7 @@
 - [x] Генерация outbound `freedom` / `vless` / `chain` в xray-конфиге entry-узла на exit-узел.
 - [x] API CRUD для узлов + привязка пользователей к цепочке (опционально).
 - [x] В подписке и `/api/client/config` — отдавать entry-точку как основную, exit — прозрачно на сервере.
-- [ ] UI: схема топологии, health-check узлов, переключение active/inactive.
+- [x] UI: схема топологии, health-check узлов, переключение active/inactive.
 
 ---
 

@@ -61,6 +61,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 			r.Get("/nodes", h.ListNodes)
 			r.Post("/nodes", h.CreateNode)
 			r.Get("/nodes/{id}", h.GetNode)
+			r.Get("/nodes/{id}/health", h.CheckNodeHealth)
 			r.Put("/nodes/{id}", h.UpdateNode)
 			r.Delete("/nodes/{id}", h.DeleteNode)
 			r.Get("/stealth/settings", h.GetStealthSettings)
