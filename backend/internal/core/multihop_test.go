@@ -112,7 +112,7 @@ func TestBuildClientConfigUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry)
+	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

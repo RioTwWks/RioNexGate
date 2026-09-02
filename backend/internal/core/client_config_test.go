@@ -23,7 +23,7 @@ func TestBuildClientConfigHash(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	cfg, err := BuildClientConfig("example.com", 443, user, 10808, nil, nil)
+	cfg, err := BuildClientConfig("example.com", 443, user, 10808, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestBuildClientConfigHash(t *testing.T) {
 
 func TestBuildClientConfigStealthProfiles(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil)
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

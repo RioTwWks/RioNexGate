@@ -33,7 +33,7 @@ func TestValidateClientLinkTrojan(t *testing.T) {
 
 func TestValidateStealthProfileLinks(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig())
+	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil)
 	for _, p := range profiles {
 		if err := ValidateClientLink(p.Link); err != nil {
 			t.Fatalf("profile %s link invalid: %v", p.Profile, err)
