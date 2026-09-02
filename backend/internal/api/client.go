@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -210,8 +212,46 @@ func (h *Handler) GetClientCommands(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = h.db.UpdateDeviceLastSeen(dc.Device.Token)
+
+	if wantsSSE(r) {
+		h.getClientCommandsSSE(w, r, dc.Device.Token, timeout)
+		return
+	}
+
 	cmds := h.commands.Poll(dc.Device.Token, timeout)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"commands": cmds})
+}
+
+func wantsSSE(r *http.Request) bool {
+	if strings.EqualFold(r.URL.Query().Get("stream"), "sse") {
+		return true
+	}
+	return strings.Contains(r.Header.Get("Accept"), "text/event-stream")
+}
+
+func (h *Handler) getClientCommandsSSE(w http.ResponseWriter, r *http.Request, deviceToken string, timeout time.Duration) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, ": connected\n\n")
+	flusher.Flush()
+
+	cmds := h.commands.Poll(deviceToken, timeout)
+	payload, err := json.Marshal(map[string]interface{}{"commands": cmds})
+	if err != nil {
+		fmt.Fprintf(w, "event: error\ndata: {\"error\":\"marshal failed\"}\n\n")
+		flusher.Flush()
+		return
+	}
+	fmt.Fprintf(w, "event: commands\ndata: %s\n\n", payload)
+	flusher.Flush()
 }
 
 func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
@@ -232,13 +272,15 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entry, _ := h.db.ResolveUserEntryNode(user)
-
+	var peer *models.WireGuardPeer
+	if h.cfg.Core.Stealth.AWGActive() { peer, _ = h.db.EnsureWireGuardPeer(user.ID, h.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
 	payload := core.BuildSubscriptionBase64Graceful(
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
 		*user,
 		&h.cfg.Core.Stealth,
 		entry,
+		peer,
 	)
 
 	if _, err := base64.StdEncoding.DecodeString(payload); err != nil {

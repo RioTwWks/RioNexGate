@@ -239,7 +239,7 @@ paths:
           description: Stats accepted
   /client/commands:
     get:
-      summary: Long-poll for remote commands
+      summary: Long-poll or SSE for remote commands
       tags: [RioNexTunnel]
       security:
         - DeviceTokenAuth: []
@@ -250,13 +250,23 @@ paths:
           schema:
             type: integer
             default: 30
+        - name: stream
+          in: query
+          description: Set to `sse` for Server-Sent Events (or send Accept text/event-stream)
+          schema:
+            type: string
+            enum: [sse]
       responses:
         "200":
-          description: Pending commands
+          description: Pending commands (JSON long-poll or text/event-stream)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientCommandsResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream with `event: commands` and JSON payload
   /stats/client:
     get:
       summary: RioNexTunnel client metrics
@@ -357,6 +367,21 @@ paths:
       responses:
         "204":
           description: Deleted
+  /nodes/{id}/health:
+    parameters:
+      - $ref: "#/components/parameters/NodeID"
+    get:
+      summary: TCP health check for node
+      tags: [Nodes]
+      responses:
+        "200":
+          description: Health check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeHealthResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /users/{id}/qr:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -600,6 +625,18 @@ components:
           type: string
         priority:
           type: integer
+    NodeHealthResponse:
+      type: object
+      properties:
+        reachable:
+          type: boolean
+        check_type:
+          type: string
+        latency_ms:
+          type: integer
+          format: int64
+        error:
+          type: string
     UserChainRequest:
       type: object
       properties:
@@ -659,6 +696,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ClientServer"
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkProfile"
         inbounds:
           type: object
         dns:

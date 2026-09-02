@@ -23,6 +23,7 @@ type LinkProfile struct {
 	Port      int    `json:"port"`
 	Tags      string `json:"tags,omitempty"`
 	Link      string `json:"link"`
+	Config    string `json:"config,omitempty"`
 }
 
 func buildVLESSLink(host string, port int, user models.User) string {
@@ -134,52 +135,22 @@ func GetClientLink(host string, port int, user models.User, protocol string, ste
 	}
 }
 
-// GetClientLinkProfiles returns all available VLESS stealth profiles for a user.
-func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig) []LinkProfile {
-	if stealth == nil || !stealth.IsActive() {
-		return []LinkProfile{{
-			Profile:   "legacy-tcp",
-			Transport: "tcp",
-			Priority:  1,
-			Port:      port,
-			Link:      buildVLESSLink(host, port, user),
-		}}
+// GetClientLinkProfiles returns all available stealth profiles for a user.
+func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer) []LinkProfile {
+	if stealth == nil || (!stealth.IsActive() && !stealth.AWGActive()) {
+		return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}}
 	}
-
-	var profiles []LinkProfile
-	priority := 1
-	if stealth.XHTTP.Enabled {
-		profiles = append(profiles, LinkProfile{
-			Profile:   "xhttp-primary",
-			Transport: "xhttp",
-			Priority:  priority,
-			Port:      stealth.XHTTP.Port,
-			Tags:      "xhttp-primary",
-			Link:      buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth),
-		})
-		priority++
+	var profiles []LinkProfile; priority := 1
+	if stealth.IsActive() {
+		if stealth.XHTTP.Enabled { profiles = append(profiles, LinkProfile{Profile: "xhttp-primary", Transport: "xhttp", Priority: priority, Port: stealth.XHTTP.Port, Tags: "xhttp-primary", Link: buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth)}); priority++ }
+		if stealth.Vision.Enabled { profiles = append(profiles, LinkProfile{Profile: "vision-ios-fallback", Transport: "tcp", Priority: priority, Port: stealth.Vision.Port, Tags: "vision-ios-fallback", Link: buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth)}); priority++ }
+		if stealth.TLS.Enabled { profiles = append(profiles, LinkProfile{Profile: "tls-mobile", Transport: "tcp", Priority: priority, Port: stealth.TLS.Port, Tags: "tls-mobile,mux-hint", Link: buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth)}); priority++ }
 	}
-	if stealth.Vision.Enabled {
-		profiles = append(profiles, LinkProfile{
-			Profile:   "vision-ios-fallback",
-			Transport: "tcp",
-			Priority:  priority,
-			Port:      stealth.Vision.Port,
-			Tags:      "vision-ios-fallback",
-			Link:      buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth),
-		})
-		priority++
+	if stealth.AWGActive() && peer != nil {
+		ini := BuildAWGClientConfig(host, &stealth.AWG, peer)
+		profiles = append(profiles, LinkProfile{Profile: "awg-udp-reserve", Transport: "awg", Priority: priority, Port: stealth.AWG.PortOrDefault(), Tags: "awg-reserve,udp", Link: BuildAWGURILink(ini), Config: ini})
 	}
-	if stealth.TLS.Enabled {
-		profiles = append(profiles, LinkProfile{
-			Profile:   "tls-mobile",
-			Transport: "tcp",
-			Priority:  priority,
-			Port:      stealth.TLS.Port,
-			Tags:      "tls-mobile,mux-hint",
-			Link:      buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth),
-		})
-	}
+	if len(profiles) == 0 { return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}} }
 	return profiles
 }
 

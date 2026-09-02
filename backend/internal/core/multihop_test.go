@@ -94,7 +94,7 @@ func TestBuildSubscriptionUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry)
+	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry, nil)
 	if len(links) == 0 {
 		t.Fatal("expected links")
 	}

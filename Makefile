@@ -7,7 +7,7 @@ DOCKER_COMPOSE := $(ROOT)scripts/docker-compose.sh
 init:
 	cp -n backend/config.example.yaml backend/config.yaml 2>/dev/null || true
 	cp -n .env.example .env 2>/dev/null || true
-	mkdir -p data/xray data/sing-box data/nginx/ssl backups
+	mkdir -p data/xray data/sing-box data/awg data/nginx/ssl backups
 	@echo "Panel URL after make dev: http://localhost:$${HTTP_PORT:-8888}"
 
 docker-check:

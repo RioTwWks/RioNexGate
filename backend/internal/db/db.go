@@ -35,6 +35,7 @@ func (d *DB) AutoMigrate() error {
 		&models.Node{},
 		&models.Device{},
 		&models.ClientStatsReport{},
+		&models.WireGuardPeer{},
 	); err != nil {
 		return err
 	}
@@ -178,6 +179,7 @@ func (d *DB) DeleteUser(id uint) error {
 		if err := tx.Where("user_id = ?", id).Delete(&models.Device{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("user_id = ?", id).Delete(&models.WireGuardPeer{}).Error; err != nil { return err }
 		return tx.Delete(&models.User{}, id).Error
 	})
 }

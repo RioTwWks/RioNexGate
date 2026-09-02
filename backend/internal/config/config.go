@@ -68,6 +68,7 @@ type StealthConfig struct {
 	Vision      StealthVisionConfig  `mapstructure:"vision"`
 	TLS           StealthTLSConfig           `mapstructure:"tls"`
 	Fragmentation StealthFragmentationConfig `mapstructure:"fragmentation"`
+	AWG           StealthAWGConfig           `mapstructure:"awg"`
 }
 
 type StealthRealityConfig struct {
@@ -123,7 +124,7 @@ func (s *StealthConfig) IsActive() bool {
 	if len(s.Reality.ServerNames) == 0 || len(s.Reality.ShortIDs) == 0 {
 		return false
 	}
-	return s.XHTTP.Enabled || s.Vision.Enabled || s.TLS.Enabled
+	return s.XHTTP.Enabled || s.Vision.Enabled || s.TLS.Enabled || s.AWG.Enabled
 }
 
 // FingerprintOrDefault returns the configured uTLS fingerprint or firefox.
@@ -185,6 +186,21 @@ func Load() (*Config, error) {
 	v.SetDefault("core.stealth.fragmentation.length", "50-100")
 	v.SetDefault("core.stealth.fragmentation.delay", "10-20")
 	v.SetDefault("core.stealth.fragmentation.max_split", "2-4")
+	v.SetDefault("core.stealth.awg.enabled", false)
+	v.SetDefault("core.stealth.awg.port", 51820)
+	v.SetDefault("core.stealth.awg.subnet", "10.8.0.0/24")
+	v.SetDefault("core.stealth.awg.server_address", "10.8.0.1/24")
+	v.SetDefault("core.stealth.awg.config_path", "./data/awg/awg0.conf")
+	v.SetDefault("core.stealth.awg.jc", 4)
+	v.SetDefault("core.stealth.awg.jmin", 40)
+	v.SetDefault("core.stealth.awg.jmax", 70)
+	v.SetDefault("core.stealth.awg.s1", 84)
+	v.SetDefault("core.stealth.awg.s2", 0)
+	v.SetDefault("core.stealth.awg.h1", int64(1286472620))
+	v.SetDefault("core.stealth.awg.h2", int64(2995958389))
+	v.SetDefault("core.stealth.awg.h3", int64(641212874))
+	v.SetDefault("core.stealth.awg.h4", int64(3523276991))
+	v.SetDefault("core.stealth.awg.tag", "awg-reserve")
 	v.SetDefault("core.multihop.enabled", false)
 	v.SetDefault("core.multihop.local_role", "entry")
 

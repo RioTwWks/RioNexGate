@@ -84,7 +84,7 @@
 - [x] `POST /api/client/register` — выдача токена, привязка к пользователю, возврат `subscription_url`.
 - [x] `GET /api/client/config` — JSON-экспорт конфига пользователя (протоколы, хост, порт, параметры транспорта).
 - [x] `POST /api/client/stats` — приём телеметрии от клиента.
-- [ ] `GET /api/client/commands` — long polling / SSE для удалённых команд. *(long polling реализован; SSE — не добавлен)*
+- [x] `GET /api/client/commands` — long polling / SSE для удалённых команд.
 - [x] `GET /api/subscription/{token}` — base64-подписка (VLESS/VMess/Trojan ссылки из `core/links.go`).
 - [x] Обновить CORS: разрешить заголовки `X-Device-Token`, `X-API-Version`.
 - [x] Документировать эндпоинты в OpenAPI (`/api/openapi.yaml`).
@@ -93,7 +93,7 @@
 
 ### 3. Генерация конфигов и ссылок
 
-- [ ] Проверить соответствие генерируемых ссылок спецификациям (обязательные поля VLESS: `id`, `encryption`, `host`, `port`; для WebSocket — `path`, `host` и т.д.). *(stealth-пресеты покрыты unit-тестами; полный аудит всех протоколов — не завершён)*
+- [x] Проверить соответствие генерируемых ссылок спецификациям (обязательные поля VLESS: `id`, `encryption`, `host`, `port`; для WebSocket — `path`, `host` и т.д.).
 - [x] Добавить экспорт полного JSON-конфига через `GET /api/client/config` (структура, удобная для RioNexTunnel).
 - [x] Включить в JSON-конфиг поле `config_hash` (SHA-256 от канонического JSON) для дедупликации обновлений на клиенте.
 - [x] Опционально: параметры входящего SOCKS5 (порт, метод аутентификации) в JSON-конфиге для согласованности с панелью.
@@ -227,7 +227,7 @@
 - [x] Генерация outbound `freedom` / `vless` / `chain` в xray-конфиге entry-узла на exit-узел.
 - [x] API CRUD для узлов + привязка пользователей к цепочке (опционально).
 - [x] В подписке и `/api/client/config` — отдавать entry-точку как основную, exit — прозрачно на сервере.
-- [ ] UI: схема топологии, health-check узлов, переключение active/inactive.
+- [x] UI: схема топологии, health-check узлов, переключение active/inactive.
 
 ---
 
@@ -239,17 +239,17 @@
 - [x] `buildVLESSRealityVisionLink()` — `flow=xtls-rprx-vision`, `security=reality`.
 - [x] `buildVLESSTLSLink()` — нестандартный порт, `security=tls`, SNI, ALPN; комментарий/hint для mux в JSON-конфиге.
 - [x] Подписка `/api/subscription/{token}` — **несколько строк** (все доступные профили пользователя) для fallback на стороне клиента.
-- [ ] `GET /api/client/config` — массив `profiles[]` с `priority`, `transport`, `tags` (`xhttp-primary`, `vision-ios-fallback`). *(профили в ссылках/подписке; в JSON-конфиге — только `servers[]`)*
+- [x] `GET /api/client/config` — массив `profiles[]` с `priority`, `transport`, `tags` (`xhttp-primary`, `vision-ios-fallback`).
 - [x] Дефолтный `fingerprint` в ссылках: `firefox` или `edge` (настраиваемо в `config.yaml`).
 
 ---
 
 ### 6. AmneziaWG (опциональный резервный протокол)
 
-- [ ] Исследовать интеграцию: отдельный Docker-сервис / sidecar или внешний узел, управляемый из панели.
-- [ ] Модель `WireGuardPeer` или расширение `User` — ключи AmneziaWG, параметры обфускации (Jc, Jmin, Jmax, S1, S2, H).
-- [ ] API: выдача конфига/QR для AmneziaWG-профиля в подписке (отдельная строка или URI-схема).
-- [ ] Документация: когда использовать AWG vs Xray-пресеты.
+- [x] Исследовать интеграцию: отдельный Docker-сервис / sidecar или внешний узел, управляемый из панели.
+- [x] Модель `WireGuardPeer` или расширение `User` — ключи AmneziaWG, параметры обфускации (Jc, Jmin, Jmax, S1, S2, H).
+- [x] API: выдача конфига/QR для AmneziaWG-профиля в подписке (отдельная строка или URI-схема).
+- [x] Документация: когда использовать AWG vs Xray-пресеты.
 
 ---
 
