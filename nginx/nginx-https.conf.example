@@ -1,4 +1,4 @@
-# HTTPS example for proxy-mgr nginx reverse proxy.
+# HTTPS example for rionexgate nginx reverse proxy.
 #
 # Usage:
 #   1. Obtain certificates (see scripts/letsencrypt.sh)

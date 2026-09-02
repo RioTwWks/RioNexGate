@@ -1,4 +1,4 @@
-# proxy-mgr — текущий статус
+# RioNexGate — текущий статус
 
 **Версия:** MVP  
 **Дата:** 2026-06
@@ -8,7 +8,7 @@
 - Docker Compose: backend + frontend + nginx
 - Веб-панель: Login, Dashboard, Users, Settings
 - REST API с `X-API-Key`
-- SQLite в `./data/proxy-mgr.db`
+- SQLite в `./data/rionexgate.db`
 - Генерация xray/sing-box конфигов при CRUD
 - Telegram-бот (при настроенном `bot_token`)
 - Backup/restore скрипты
@@ -54,4 +54,4 @@ make docker-doctor
 curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/health
 ```
 
-401 в панели → неверный ключ в localStorage; Logout или `localStorage.removeItem('proxy_mgr_api_key')`.
+401 в панели → неверный ключ в localStorage; Logout или `localStorage.removeItem('rionexgate_api_key')`.

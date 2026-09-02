@@ -1,5 +1,5 @@
 {
-  "name": "proxy-mgr-e2e",
+  "name": "rionexgate-e2e",
   "private": true,
   "version": "0.1.0",
   "scripts": {

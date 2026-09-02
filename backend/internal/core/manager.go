@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/db"
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/config"
+	"rionexgate/internal/db"
+	"rionexgate/internal/models"
 )
 
 type Manager interface {

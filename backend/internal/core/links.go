@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/models"
 )
 
 // SupportedProtocols lists client link protocols available in the UI and API.

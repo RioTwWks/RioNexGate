@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_KEY_STORAGE = 'proxy_mgr_api_key';
+const API_KEY_STORAGE = 'rionexgate_api_key';
 
 const api = axios.create({
   baseURL: '/api',

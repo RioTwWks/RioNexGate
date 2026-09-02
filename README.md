@@ -1,6 +1,6 @@
-# proxy-mgr — панель управления прокси
+# RioNexGate — панель управления прокси
 
-**proxy-mgr** — панель для управления прокси на **Xray-core** и **sing-box**: Go API, React UI, Telegram-бот, Docker Compose.
+**RioNexGate** — панель для управления прокси на **Xray-core** и **sing-box**: Go API, React UI, Telegram-бот, Docker Compose.
 
 MVP реализован: пользователи, VLESS-ссылки, QR, трафик, переключение ядра.
 
@@ -42,8 +42,8 @@ make docker-doctor
 ## Быстрый старт
 
 ```bash
-git clone <repo-url> proxy-mgr
-cd proxy-mgr
+git clone <repo-url> RioNexGate
+cd RioNexGate
 
 make init
 ```
@@ -105,7 +105,7 @@ make dev-cores
 4. **Users** — создание, редактирование, ссылки и QR
 5. **Settings** — переключение xray ↔ sing-box, reload ядра
 
-При ошибке 401: нажмите **Logout** или очистите `localStorage` (`proxy_mgr_api_key`).
+При ошибке 401: нажмите **Logout** или очистите `localStorage` (`rionexgate_api_key`).
 
 В модальном окне ссылки можно выбрать протокол: **VLESS**, **VMess** или **Trojan**.
 
@@ -114,7 +114,7 @@ make dev-cores
 После запуска панели откройте http://localhost:8888/api/docs — интерактивная документация API.  
 Спецификация: http://localhost:8888/api/openapi.yaml
 
-Для «Try it out» в Swagger UI используется ключ из `localStorage` (`proxy_mgr_api_key`), если вы уже вошли в панель.
+Для «Try it out» в Swagger UI используется ключ из `localStorage` (`rionexgate_api_key`), если вы уже вошли в панель.
 
 ## HTTPS (Let's Encrypt)
 
@@ -173,7 +173,7 @@ server:
   api_key: "change-me"          # ключ для панели и API
 
 database:
-  path: "./data/proxy-mgr.db"
+  path: "./data/rionexgate.db"
 
 core:
   type: "xray"                  # или "sing-box"
@@ -248,7 +248,7 @@ cd frontend && npm install && npm run dev   # UI :5173, proxy /api → :8080
 ## Структура проекта
 
 ```
-proxy-mgr/
+RioNexGate/
 ├── backend/
 │   ├── cmd/main.go              # serve + migrate
 │   ├── internal/
@@ -285,7 +285,7 @@ proxy-mgr/
 
 ```bash
 ./scripts/backup.sh
-./scripts/restore.sh backups/proxy-mgr-data-YYYYMMDD_HHMMSS.tar.gz
+./scripts/restore.sh backups/rionexgate-data-YYYYMMDD_HHMMSS.tar.gz
 ```
 
 ## Устранение неполадок
@@ -296,7 +296,7 @@ proxy-mgr/
 | `docker-credential-desktop not found` | `echo '{"auths":{}}' > ~/.docker/config.json` |
 | `KeyError: 'id'` (compose) | Удалить `docker-compose` v1, использовать `docker compose` v2 |
 | Порт 80 занят | Используйте `HTTP_PORT=8888` в `.env` |
-| 401 в панели | Неверный API key; Logout или очистить `proxy_mgr_api_key` в localStorage |
+| 401 в панели | Неверный API key; Logout или очистить `rionexgate_api_key` в localStorage |
 | `make dev` не видит docker | Перелогиниться после `usermod`; `make` использует `sg docker` как fallback |
 | xray stats не работают | `make dev-cores`, проверить `core.xray.api_address` |
 

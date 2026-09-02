@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: proxy-mgr API
-  description: REST API for proxy-mgr panel (Xray-core / sing-box management)
+  title: RioNexGate API
+  description: REST API for RioNexGate panel (Xray-core / sing-box management)
   version: 1.0.0
 servers:
   - url: /api

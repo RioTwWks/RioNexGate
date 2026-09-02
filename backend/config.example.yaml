@@ -3,7 +3,7 @@ server:
   api_key: "change-me-to-secure-key"   # тот же ключ вводится в веб-панели
 
 database:
-  path: "./data/proxy-mgr.db"
+  path: "./data/rionexgate.db"
 
 core:
   type: "xray"   # or "sing-box"

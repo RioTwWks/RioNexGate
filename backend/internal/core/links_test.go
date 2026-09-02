@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/models"
 )
 
 func TestBuildVLESSLink(t *testing.T) {

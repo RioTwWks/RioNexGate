@@ -12,7 +12,7 @@ const swaggerUIHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>proxy-mgr API</title>
+  <title>RioNexGate API</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
 </head>
 <body>
@@ -26,7 +26,7 @@ const swaggerUIHTML = `<!DOCTYPE html>
         persistAuthorization: true,
         presets: [SwaggerUIBundle.presets.apis],
         requestInterceptor: function(req) {
-          var key = localStorage.getItem('proxy_mgr_api_key');
+          var key = localStorage.getItem('rionexgate_api_key');
           if (key) req.headers['X-API-Key'] = key;
           return req;
         }

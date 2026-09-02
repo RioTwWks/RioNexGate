@@ -18,7 +18,7 @@ export function Layout() {
   return (
     <div className="min-h-screen flex">
       <aside className="w-56 bg-slate-900 border-r border-slate-800 p-4 flex flex-col">
-        <h1 className="text-lg font-semibold mb-6 text-sky-400">proxy-mgr</h1>
+        <h1 className="text-lg font-semibold mb-6 text-sky-400">RioNexGate</h1>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
             <Link

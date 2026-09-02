@@ -5,7 +5,7 @@ import (
 	"embed"
 	"text/template"
 
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/models"
 )
 
 //go:embed templates/*.tmpl

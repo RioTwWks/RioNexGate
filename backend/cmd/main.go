@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"proxy-mgr/internal/api"
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/core"
-	"proxy-mgr/internal/db"
-	"proxy-mgr/internal/telegram"
+	"rionexgate/internal/api"
+	"rionexgate/internal/config"
+	"rionexgate/internal/core"
+	"rionexgate/internal/db"
+	"rionexgate/internal/telegram"
 )
 
 func main() {

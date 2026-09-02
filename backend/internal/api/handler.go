@@ -1,9 +1,9 @@
 package api
 
 import (
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/core"
-	"proxy-mgr/internal/db"
+	"rionexgate/internal/config"
+	"rionexgate/internal/core"
+	"rionexgate/internal/db"
 )
 
 type Handler struct {

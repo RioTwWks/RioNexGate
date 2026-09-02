@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 
 const API_KEY = 'e2e-test-key';
 
-test.describe('proxy-mgr panel', () => {
+test.describe('RioNexGate panel', () => {
   test('login and view dashboard', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'proxy-mgr' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'RioNexGate' })).toBeVisible();
 
     await page.getByPlaceholder('API key').fill(API_KEY);
     await page.getByRole('button', { name: 'Login' }).click();
