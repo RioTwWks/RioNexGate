@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"rionexgate/internal/db"
@@ -13,27 +14,43 @@ import (
 )
 
 type UserDTO struct {
-	ID        uint      `json:"id"`
-	UUID      string    `json:"uuid"`
-	Email     string    `json:"email"`
-	TrafficGB int64     `json:"traffic_gb"`
-	UsedGB    float64   `json:"used_gb"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
+	ID                uint      `json:"id"`
+	UUID              string    `json:"uuid"`
+	Email             string    `json:"email"`
+	TrafficGB         int64     `json:"traffic_gb"`
+	UsedGB            float64   `json:"used_gb"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	Active            bool      `json:"active"`
+	CreatedAt         time.Time `json:"created_at"`
+	SubscriptionToken string    `json:"subscription_token,omitempty"`
+	SubscriptionURL   string    `json:"subscription_url,omitempty"`
 }
 
 func toUserDTO(u models.User) UserDTO {
 	return UserDTO{
-		ID:        u.ID,
-		UUID:      u.UUID,
-		Email:     u.Email,
-		TrafficGB: u.TrafficGB,
-		UsedGB:    float64(u.UsedBytes) / (1024 * 1024 * 1024),
-		ExpiresAt: u.ExpiresAt,
-		Active:    u.Active,
-		CreatedAt: u.CreatedAt,
+		ID:                u.ID,
+		UUID:              u.UUID,
+		Email:             u.Email,
+		TrafficGB:         u.TrafficGB,
+		UsedGB:            float64(u.UsedBytes) / (1024 * 1024 * 1024),
+		ExpiresAt:         u.ExpiresAt,
+		Active:            u.Active,
+		CreatedAt:         u.CreatedAt,
+		SubscriptionToken: u.SubscriptionToken,
 	}
+}
+
+func (h *Handler) enrichUserDTO(r *http.Request, dto UserDTO) UserDTO {
+	if dto.SubscriptionToken == "" {
+		token, err := h.db.EnsureSubscriptionToken(dto.ID)
+		if err == nil && token != "" {
+			dto.SubscriptionToken = token
+		}
+	}
+	if dto.SubscriptionToken != "" {
+		dto.SubscriptionURL = h.subscriptionURL(r, dto.SubscriptionToken)
+	}
+	return dto
 }
 
 type CreateUserRequest struct {
@@ -88,7 +105,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "user created but reload failed: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, toUserDTO(*user))
+	writeJSON(w, http.StatusCreated, h.enrichUserDTO(r, toUserDTO(*user)))
 }
 
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +114,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserDTO(*user))
+	writeJSON(w, http.StatusOK, h.enrichUserDTO(r, toUserDTO(*user)))
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +148,52 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "updated but reload failed: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserDTO(*user))
+	writeJSON(w, http.StatusOK, h.enrichUserDTO(r, toUserDTO(*user)))
+}
+
+func (h *Handler) GetUserProfiles(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserParam(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+	profiles, err := h.core.GetClientLinkProfiles(strconv.FormatUint(uint64(user.ID), 10))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	type profileDTO struct {
+		ID        string   `json:"id"`
+		Name      string   `json:"name"`
+		Transport string   `json:"transport"`
+		Tags      []string `json:"tags"`
+		Priority  int      `json:"priority"`
+		Link      string   `json:"link"`
+	}
+	dtos := make([]profileDTO, 0, len(profiles))
+	for _, p := range profiles {
+		tags := []string{}
+		if p.Tags != "" {
+			for _, t := range strings.Split(p.Tags, ",") {
+				if trimmed := strings.TrimSpace(t); trimmed != "" {
+					tags = append(tags, trimmed)
+				}
+			}
+		}
+		transport := p.Transport
+		if transport == "tcp" && strings.Contains(p.Profile, "vision") {
+			transport = "vision"
+		}
+		dtos = append(dtos, profileDTO{
+			ID:        p.Profile,
+			Name:      p.Profile,
+			Transport: transport,
+			Tags:      tags,
+			Priority:  p.Priority,
+			Link:      p.Link,
+		})
+	}
+	writeJSON(w, http.StatusOK, dtos)
 }
 
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {

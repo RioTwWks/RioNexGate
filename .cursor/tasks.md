@@ -60,9 +60,9 @@
 
 ### 1. Модель данных
 
-- [ ] Добавить поле `device_tokens` — список уникальных токенов устройств (отдельная таблица `Device` с FK на `User`: `token`, `label`, `last_seen_at`, `created_at`).
-- [ ] Добавить поле `subscription_token` у пользователя — персональный токен для URL подписки (`https://panel/sub/{token}`).
-- [ ] Миграция БД + обновление OpenAPI-схемы.
+- [x] Добавить поле `device_tokens` — список уникальных токенов устройств (отдельная таблица `Device` с FK на `User`: `token`, `label`, `last_seen_at`, `created_at`).
+- [x] Добавить поле `subscription_token` у пользователя — персональный токен для URL подписки (`https://panel/sub/{token}`).
+- [x] Миграция БД + обновление OpenAPI-схемы.
 
 ---
 
@@ -79,75 +79,75 @@
 | `GET` | `/api/subscription/{token}` | Стандартная подписка: base64-encoded список ссылок (совместимость с любыми клиентами). |
 
 Задачи:
-- [ ] Реализовать handlers и роуты в `backend/internal/api/`.
-- [ ] Middleware `DeviceTokenAuth` (отдельно от `APIKeyAuth`).
-- [ ] `POST /api/client/register` — выдача токена, привязка к пользователю, возврат `subscription_url`.
-- [ ] `GET /api/client/config` — JSON-экспорт конфига пользователя (протоколы, хост, порт, параметры транспорта).
-- [ ] `POST /api/client/stats` — приём телеметрии от клиента.
-- [ ] `GET /api/client/commands` — long polling / SSE для удалённых команд.
-- [ ] `GET /api/subscription/{token}` — base64-подписка (VLESS/VMess/Trojan ссылки из `core/links.go`).
-- [ ] Обновить CORS: разрешить заголовки `X-Device-Token`, `X-API-Version`.
-- [ ] Документировать эндпоинты в OpenAPI (`/api/openapi.yaml`).
+- [x] Реализовать handlers и роуты в `backend/internal/api/`.
+- [x] Middleware `DeviceTokenAuth` (отдельно от `APIKeyAuth`).
+- [x] `POST /api/client/register` — выдача токена, привязка к пользователю, возврат `subscription_url`.
+- [x] `GET /api/client/config` — JSON-экспорт конфига пользователя (протоколы, хост, порт, параметры транспорта).
+- [x] `POST /api/client/stats` — приём телеметрии от клиента.
+- [ ] `GET /api/client/commands` — long polling / SSE для удалённых команд. *(long polling реализован; SSE — не добавлен)*
+- [x] `GET /api/subscription/{token}` — base64-подписка (VLESS/VMess/Trojan ссылки из `core/links.go`).
+- [x] Обновить CORS: разрешить заголовки `X-Device-Token`, `X-API-Version`.
+- [x] Документировать эндпоинты в OpenAPI (`/api/openapi.yaml`).
 
 ---
 
 ### 3. Генерация конфигов и ссылок
 
-- [ ] Проверить соответствие генерируемых ссылок спецификациям (обязательные поля VLESS: `id`, `encryption`, `host`, `port`; для WebSocket — `path`, `host` и т.д.).
-- [ ] Добавить экспорт полного JSON-конфига через `GET /api/client/config` (структура, удобная для RioNexTunnel).
-- [ ] Включить в JSON-конфиг поле `config_hash` (SHA-256 от канонического JSON) для дедупликации обновлений на клиенте.
-- [ ] Опционально: параметры входящего SOCKS5 (порт, метод аутентификации) в JSON-конфиге для согласованности с панелью.
+- [ ] Проверить соответствие генерируемых ссылок спецификациям (обязательные поля VLESS: `id`, `encryption`, `host`, `port`; для WebSocket — `path`, `host` и т.д.). *(stealth-пресеты покрыты unit-тестами; полный аудит всех протоколов — не завершён)*
+- [x] Добавить экспорт полного JSON-конфига через `GET /api/client/config` (структура, удобная для RioNexTunnel).
+- [x] Включить в JSON-конфиг поле `config_hash` (SHA-256 от канонического JSON) для дедупликации обновлений на клиенте.
+- [x] Опционально: параметры входящего SOCKS5 (порт, метод аутентификации) в JSON-конфиге для согласованности с панелью.
 
 ---
 
 ### 4. Хранение и учёт статистики
 
-- [ ] Таблица `ClientStatsReport` (`device_token`, `session_id`, `bytes_in`, `bytes_out`, `reported_at`) для приёма телеметрии от клиентов.
-- [ ] Дедупликация по `session_id` + временным меткам — повторные отправки не удваивают трафик.
-- [ ] При отсутствии heartbeat от устройства — не блокировать пользователя; продолжать учёт с серверной стороны (xray Stats API).
-- [ ] Агрегация client-reported stats с server-side polling в единый ответ `/api/stats/user/{id}`.
+- [x] Таблица `ClientStatsReport` (`device_token`, `session_id`, `bytes_in`, `bytes_out`, `reported_at`) для приёма телеметрии от клиентов.
+- [x] Дедупликация по `session_id` + временным меткам — повторные отправки не удваивают трафик.
+- [x] При отсутствии heartbeat от устройства — не блокировать пользователя; продолжать учёт с серверной стороны (xray Stats API).
+- [x] Агрегация client-reported stats с server-side polling в единый ответ `/api/stats/user/{id}`.
 
 ---
 
 ### 5. Отказоустойчивость и кеширование
 
-- [ ] Кеш последнего известного конфига для устройства (в БД или in-memory с TTL) — клиент может получить конфиг при временных проблемах с генерацией.
-- [ ] Валидировать JSON-ответы перед отдачей; при ошибке генерации — отдавать последний валидный кеш + логировать ошибку.
-- [ ] Подписка `/api/subscription/{token}` должна отдавать корректный base64 даже при частичных сбоях (graceful degradation: хотя бы рабочие ссылки).
+- [x] Кеш последнего известного конфига для устройства (в БД или in-memory с TTL) — клиент может получить конфиг при временных проблемах с генерацией.
+- [x] Валидировать JSON-ответы перед отдачей; при ошибке генерации — отдавать последний валидный кеш + логировать ошибку.
+- [x] Подписка `/api/subscription/{token}` должна отдавать корректный base64 даже при частичных сбоях (graceful degradation: хотя бы рабочие ссылки).
 
 ---
 
 ### 6. Версионирование API
 
-- [ ] Поддержать заголовок `X-API-Version: v1` в запросах клиента; отвечать тем же заголовком.
-- [ ] Зафиксировать контракт v1 в OpenAPI; breaking changes — только в v2.
+- [x] Поддержать заголовок `X-API-Version: v1` в запросах клиента; отвечать тем же заголовком.
+- [x] Зафиксировать контракт v1 в OpenAPI; breaking changes — только в v2.
 
 ---
 
 ### 7. Логирование и мониторинг
 
-- [ ] Логировать все запросы к `/api/client/*` с `device_token` (маскированным) и `user_id` для отладки синхронизации.
-- [ ] Метрики: количество активных устройств, частота sync, ошибки регистрации.
+- [x] Логировать все запросы к `/api/client/*` с `device_token` (маскированным) и `user_id` для отладки синхронизации.
+- [x] Метрики: количество активных устройств, частота sync, ошибки регистрации.
 
 ---
 
 ### 8. Тестирование (сервер)
 
-- [ ] Интеграционные тесты в `backend/internal/api/integration_test.go`:
+- [x] Интеграционные тесты в `backend/internal/api/integration_test.go`:
   - регистрация устройства → получение конфига → приём статистики;
   - обновление пользователя → новый `config_hash` в ответе `/api/client/config`;
   - невалидный `device_token` → `401`;
   - подписка `/api/subscription/{token}` → валидный base64 со ссылками;
   - дедупликация stats по `session_id`.
-- [ ] E2E (Playwright): сценарий выдачи subscription URL из UI и проверка ответа эндпоинта.
+- [x] E2E (Playwright): сценарий выдачи subscription URL из UI и проверка ответа эндпоинта. *(PR #5, `e2e/tests/rionex-stealth.spec.ts`)*
 
 ---
 
 ### 9. UI (минимальные доработки)
 
-- [ ] На странице пользователя: отображение `subscription_url`, кнопка «Скопировать подписку».
-- [ ] Список зарегистрированных устройств (`device_tokens`) с `last_seen_at`, возможность отозвать токен.
-- [ ] Индикатор: клиент синхронизирован / давно не отчитывался.
+- [x] На странице пользователя: отображение `subscription_url`, кнопка «Скопировать подписку».
+- [x] Список зарегистрированных устройств (`device_tokens`) с `last_seen_at`, возможность отозвать токен.
+- [x] Индикатор: клиент синхронизирован / давно не отчитывался.
 
 ---
 
@@ -191,21 +191,21 @@
 | **Альтернатива** | `AmneziaWG` | UDP | Резерв при блокировке Xray-стека; отдельный inbound/профиль |
 
 Задачи:
-- [ ] Расширить `backend/internal/config` — секция `core.stealth` (или `core.xray.inbounds[]`) с пресетами транспортов.
-- [ ] Переписать/дополнить `templates/xray.json.tmpl` — **два основных inbound** одновременно: XHTTP+Reality (443) и TCP+Reality+Vision (8443).
-- [ ] Для XHTTP явно задавать `"mode": "stream-one"` (не `auto` — известные баги).
-- [ ] Параметры Reality в шаблоне: `dest`, `serverNames`, `privateKey`, `shortIds`, `fingerprint` (по умолчанию `firefox` или `edge`, не `chrome`/`safari`).
-- [ ] Аналогичные пресеты для sing-box (`templates/singbox.json.tmpl`) где транспорт поддерживается.
-- [ ] Генерация **нескольких ссылок на пользователя** (по одной на каждый inbound) для подписки и API.
+- [x] Расширить `backend/internal/config` — секция `core.stealth` (или `core.xray.inbounds[]`) с пресетами транспортов.
+- [x] Переписать/дополнить `templates/xray.json.tmpl` — **два основных inbound** одновременно: XHTTP+Reality (443) и TCP+Reality+Vision (8443).
+- [x] Для XHTTP явно задавать `"mode": "stream-one"` (не `auto` — известные баги).
+- [x] Параметры Reality в шаблоне: `dest`, `serverNames`, `privateKey`, `shortIds`, `fingerprint` (по умолчанию `firefox` или `edge`, не `chrome`/`safari`).
+- [x] Аналогичные пресеты для sing-box (`templates/singbox.json.tmpl`) где транспорт поддерживается.
+- [x] Генерация **нескольких ссылок на пользователя** (по одной на каждый inbound) для подписки и API.
 
 ---
 
 ### 2. Маскировка Reality (Impersonation)
 
-- [ ] Поля конфига: `reality.dest`, `reality.server_names[]`, опционально `show` / `xver`.
-- [ ] **Валидация и рекомендации в UI/docs:** не использовать популярные цели (`yahoo.com`, `vk.com`) — повышенный контроль.
-- [ ] Рекомендовать малоизвестные легитимные CDN-домены (например, зона `.okcdn.ru`) или собственный сайт-донор.
-- [ ] Документировать выбор `dest` и проверку доступности сайта-донора с сервера (`curl -vI`).
+- [x] Поля конфига: `reality.dest`, `reality.server_names[]`, опционально `show` / `xver`.
+- [x] **Валидация и рекомендации в UI/docs:** не использовать популярные цели (`yahoo.com`, `vk.com`) — повышенный контроль. *(StealthWarnings + docs/stealth.md)*
+- [x] Рекомендовать малоизвестные легитимные CDN-домены (например, зона `.okcdn.ru`) или собственный сайт-донор.
+- [x] Документировать выбор `dest` и проверку доступности сайта-донора с сервера (`curl -vI`).
 - [ ] При появлении в upstream Xray расширенных опций impersonation — подключать через конфиг без форка.
 
 ---
@@ -234,12 +234,12 @@
 
 Текущие ссылки в `core/links.go` — `VLESS/TCP/security=none`. Нужно:
 
-- [ ] `buildVLESSRealityXHTTPLink()` — параметры: `type=xhttp`, `security=reality`, `pbk`, `sid`, `fp`, `path`, `mode=stream-one`.
-- [ ] `buildVLESSRealityVisionLink()` — `flow=xtls-rprx-vision`, `security=reality`.
-- [ ] `buildVLESSTLSLink()` — нестандартный порт, `security=tls`, SNI, ALPN; комментарий/hint для mux в JSON-конфиге.
-- [ ] Подписка `/api/subscription/{token}` — **несколько строк** (все доступные профили пользователя) для fallback на стороне клиента.
-- [ ] `GET /api/client/config` — массив `profiles[]` с `priority`, `transport`, `tags` (`xhttp-primary`, `vision-ios-fallback`).
-- [ ] Дефолтный `fingerprint` в ссылках: `firefox` или `edge` (настраиваемо в `config.yaml`).
+- [x] `buildVLESSRealityXHTTPLink()` — параметры: `type=xhttp`, `security=reality`, `pbk`, `sid`, `fp`, `path`, `mode=stream-one`.
+- [x] `buildVLESSRealityVisionLink()` — `flow=xtls-rprx-vision`, `security=reality`.
+- [x] `buildVLESSTLSLink()` — нестандартный порт, `security=tls`, SNI, ALPN; комментарий/hint для mux в JSON-конфиге.
+- [x] Подписка `/api/subscription/{token}` — **несколько строк** (все доступные профили пользователя) для fallback на стороне клиента.
+- [ ] `GET /api/client/config` — массив `profiles[]` с `priority`, `transport`, `tags` (`xhttp-primary`, `vision-ios-fallback`). *(профили в ссылках/подписке; в JSON-конфиге — только `servers[]`)*
+- [x] Дефолтный `fingerprint` в ссылках: `firefox` или `edge` (настраиваемо в `config.yaml`).
 
 ---
 
@@ -254,38 +254,38 @@
 
 ### 7. Версионирование и обновление ядра
 
-- [ ] Пиновать версию Xray-core в Docker (`ARG XRAY_VERSION`) с регулярным обновлением.
-- [ ] CI: smoke-тест генерации конфига на новой версии Xray (валидный JSON, `xray run -test`).
-- [ ] Changelog/checklist при обновлении ядра: проверить breaking changes в XHTTP/Reality.
+- [x] Пиновать версию Xray-core в Docker (`ARG XRAY_VERSION`) с регулярным обновлением.
+- [x] CI: smoke-тест генерации конфига на новой версии Xray (валидный JSON, `xray run -test`).
+- [ ] Changelog/checklist при обновлении ядра: проверить breaking changes в XHTTP/Reality. *(частично в docs/stealth.md)*
 - [ ] Watch upstream: issues по Reality fingerprint, XHTTP, DPI — без форка до появления официального решения.
 
 ---
 
 ### 8. Развёртывание и документация
 
-- [ ] Пример `config.yaml` с полным stealth-пресетом (два inbound, Reality, fingerprint).
-- [ ] Скрипт или раздел в README: генерация Reality keypair (`xray x25519`), выбор `dest`.
-- [ ] Docker Compose: порты 443 и 8443, `cap_net_bind_service` при необходимости.
-- [ ] `docs/stealth.md` — объяснение угроз, выбор связки, почему не форк, чеклист перед production.
+- [x] Пример `config.yaml` с полным stealth-пресетом (два inbound, Reality, fingerprint).
+- [x] Скрипт или раздел в README: генерация Reality keypair (`xray x25519`), выбор `dest`.
+- [x] Docker Compose: порты 443 и 8443, `cap_net_bind_service` при необходимости.
+- [x] `docs/stealth.md` — объяснение угроз, выбор связки, почему не форк, чеклист перед production.
 - [ ] Ansible/terraform примеры (опционально) для entry-узла в РФ + exit за рубежом.
 
 ---
 
 ### 9. UI (панель управления)
 
-- [ ] Страница «Транспорты / Stealth»: включение пресетов, порты, Reality dest, fingerprint по умолчанию.
-- [ ] Просмотр сгенерированных ссылок по профилям (XHTTP, Vision, TLS, AWG).
-- [ ] Предупреждения при небезопасных настройках (популярный dest, `chrome` fingerprint, только TCP без XHTTP).
-- [ ] Тест «проверить доступность dest» с backend-запроса.
+- [x] Страница «Транспорты / Stealth»: включение пресетов, порты, Reality dest, fingerprint по умолчанию.
+- [x] Просмотр сгенерированных ссылок по профилям (XHTTP, Vision, TLS, AWG).
+- [x] Предупреждения при небезопасных настройках (популярный dest, `chrome` fingerprint, только TCP без XHTTP).
+- [x] Тест «проверить доступность dest» с backend-запроса.
 
 ---
 
 ### 10. Тестирование (сервер)
 
-- [ ] Unit-тесты генерации конфига: два inbound, обязательные поля Reality/XHTTP.
-- [ ] Unit-тесты ссылок: корректные query-параметры для каждого пресета.
-- [ ] Integration: `xray run -test -c` на сгенерированном конфиге в CI.
-- [ ] Документировать ручной чеклист: подключение с тестового клиента через каждый inbound (вне CI, на staging).
+- [x] Unit-тесты генерации конфига: два inbound, обязательные поля Reality/XHTTP.
+- [x] Unit-тесты ссылок: корректные query-параметры для каждого пресета.
+- [x] Integration: `xray run -test -c` на сгенерированном конфиге в CI.
+- [ ] Документировать ручной чеклист: подключение с тестового клиента через каждый inbound (вне CI, на staging). *(частично в docs/stealth.md)*
 
 ---
 
