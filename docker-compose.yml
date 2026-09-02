@@ -48,7 +48,8 @@ services:
       - ./data/nginx/ssl:/etc/nginx/ssl:ro
     ports:
       - "${HTTP_PORT:-8888}:80"
-      # - "${HTTPS_PORT:-8443}:443"  # раскомментировать при настройке SSL
+      # HTTPS: cp nginx/nginx-https.conf.example nginx/nginx.conf, run scripts/letsencrypt.sh, then:
+      # - "${HTTPS_PORT:-8443}:443"
     depends_on:
       backend:
         condition: service_healthy

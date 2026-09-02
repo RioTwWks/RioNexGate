@@ -33,8 +33,8 @@
 
 ## Post-MVP
 
-- [ ] OpenAPI `/api/docs`
-- [ ] HTTPS / Let's Encrypt example
-- [ ] Доп. протоколы (VMess, Trojan) в UI
-- [ ] CI pipeline
-- [ ] E2E tests
+- [x] OpenAPI `/api/docs`
+- [x] HTTPS / Let's Encrypt example
+- [x] Доп. протоколы (VMess, Trojan) в UI
+- [x] CI pipeline
+- [x] E2E tests

@@ -1,0 +1,58 @@
+# HTTPS example for proxy-mgr nginx reverse proxy.
+#
+# Usage:
+#   1. Obtain certificates (see scripts/letsencrypt.sh)
+#   2. Copy certs to data/nginx/ssl/:
+#        fullchain.pem
+#        privkey.pem
+#   3. Replace nginx/nginx.conf with this file OR merge the ssl server block.
+#   4. Uncomment HTTPS port in docker-compose.yml (HTTPS_PORT, default 8443)
+#
+# HTTP requests are redirected to HTTPS.
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream backend {
+        server backend:8080;
+    }
+
+    upstream frontend {
+        server frontend:80;
+    }
+
+    # Redirect HTTP -> HTTPS
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name _;
+
+        ssl_certificate     /etc/nginx/ssl/fullchain.pem;
+        ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        location /api/ {
+            proxy_pass http://backend;
+            proxy_pass_request_headers on;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-API-Key $http_x_api_key;
+        }
+
+        location / {
+            proxy_pass http://frontend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}

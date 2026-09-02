@@ -93,6 +93,7 @@ make dev-cores
 | `make migrate` | Миграция БД в контейнере backend |
 | `make docker-doctor` | Проверка Docker |
 | `make test` | `go test` + `npm test` |
+| `make test-e2e` | Playwright E2E (backend + frontend dev) |
 | `make logs` | Логи compose |
 | `make clean` | Остановить и удалить volumes |
 
@@ -105,6 +106,49 @@ make dev-cores
 5. **Settings** — переключение xray ↔ sing-box, reload ядра
 
 При ошибке 401: нажмите **Logout** или очистите `localStorage` (`proxy_mgr_api_key`).
+
+В модальном окне ссылки можно выбрать протокол: **VLESS**, **VMess** или **Trojan**.
+
+## OpenAPI / Swagger
+
+После запуска панели откройте http://localhost:8888/api/docs — интерактивная документация API.  
+Спецификация: http://localhost:8888/api/openapi.yaml
+
+Для «Try it out» в Swagger UI используется ключ из `localStorage` (`proxy_mgr_api_key`), если вы уже вошли в панель.
+
+## HTTPS (Let's Encrypt)
+
+Пример настройки TLS для nginx:
+
+1. Убедитесь, что домен указывает на сервер и порт 80 свободен.
+2. Получите сертификат:
+   ```bash
+   chmod +x scripts/letsencrypt.sh
+   ./scripts/letsencrypt.sh panel.example.com
+   ```
+3. Включите HTTPS-конфиг nginx:
+   ```bash
+   cp nginx/nginx-https.conf.example nginx/nginx.conf
+   ```
+4. В `docker-compose.yml` раскомментируйте порт `HTTPS_PORT` (по умолчанию `8443`).
+5. `make up` — панель на `https://panel.example.com:8443`.
+
+Подробности в комментариях [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.example) и [`scripts/letsencrypt.sh`](scripts/letsencrypt.sh).
+
+## CI и E2E-тесты
+
+GitHub Actions (`.github/workflows/ci.yml`):
+
+- `go test` (backend, включая API integration tests)
+- `npm run build` (frontend)
+- Playwright smoke-тесты (`e2e/`)
+
+Локально:
+
+```bash
+make test
+make test-e2e   # требует Node 20+, Go 1.21+, gcc (CGO)
+```
 
 ## Telegram-бот
 
@@ -177,10 +221,13 @@ curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/users
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
 | GET | `/health` | Health check (без auth) |
+| GET | `/docs` | Swagger UI (OpenAPI) |
+| GET | `/openapi.yaml` | OpenAPI спецификация |
+| GET | `/protocols` | Поддерживаемые протоколы ссылок |
 | GET | `/users` | Список пользователей |
 | POST | `/users` | Создать пользователя |
 | GET/PUT/DELETE | `/users/{id}` | CRUD |
-| GET | `/users/{id}/link?proto=vless` | Строка подключения |
+| GET | `/users/{id}/link?proto=vless\|vmess\|trojan` | Строка подключения |
 | GET | `/users/{id}/qr` | QR-код (PNG) |
 | GET | `/stats/total` | Общая статистика |
 | GET | `/stats/user/{id}` | Трафик пользователя |

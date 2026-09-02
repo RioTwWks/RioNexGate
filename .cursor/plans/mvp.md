@@ -68,9 +68,9 @@ make test          # go test + npm test
 
 ## Post-MVP (бэклог)
 
-- [ ] OpenAPI/Swagger
-- [ ] TLS/HTTPS в nginx (порт 443)
-- [ ] Протоколы кроме VLESS в UI
-- [ ] E2E-тесты
-- [ ] CI (build + test)
+- [x] OpenAPI/Swagger (`/api/docs`)
+- [x] TLS/HTTPS в nginx (пример + `scripts/letsencrypt.sh`)
+- [x] Протоколы VMess/Trojan в UI
+- [x] E2E-тесты (Playwright + API integration)
+- [x] CI (build + test)
 - [ ] Подписка (subscription URL)
