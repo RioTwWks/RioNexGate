@@ -47,7 +47,7 @@ type ClientConfig struct {
 	DNS        ClientDNS      `json:"dns"`
 }
 
-func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry *models.Node) (*ClientConfig, error) {
+func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) (*ClientConfig, error) {
 	ep := ResolveClientEndpoint(host, port, user, entry)
 	servers := make([]ClientServer, 0, len(SupportedProtocols))
 	for _, proto := range SupportedProtocols {
@@ -75,7 +75,7 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 		socksPort = 10808
 	}
 
-	profiles := GetClientLinkProfiles(ep.Host, ep.Port, user, stealth)
+	profiles := GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer)
 
 	body := ClientConfigBody{
 		Servers:  servers,

@@ -66,8 +66,9 @@ type StealthConfig struct {
 	Reality     StealthRealityConfig `mapstructure:"reality"`
 	XHTTP       StealthXHTTPConfig   `mapstructure:"xhttp"`
 	Vision      StealthVisionConfig  `mapstructure:"vision"`
-	TLS         StealthTLSConfig     `mapstructure:"tls"`
-	AWG         StealthAWGConfig     `mapstructure:"awg"`
+	TLS           StealthTLSConfig           `mapstructure:"tls"`
+	Fragmentation StealthFragmentationConfig `mapstructure:"fragmentation"`
+	AWG           StealthAWGConfig           `mapstructure:"awg"`
 }
 
 type StealthRealityConfig struct {
@@ -180,6 +181,11 @@ func Load() (*Config, error) {
 	v.SetDefault("core.stealth.tls.port", 2053)
 	v.SetDefault("core.stealth.tls.alpn", []string{"h2", "http/1.1"})
 	v.SetDefault("core.stealth.tls.tag", "vless-tls")
+	v.SetDefault("core.stealth.fragmentation.enabled", false)
+	v.SetDefault("core.stealth.fragmentation.strategy", "serverhello")
+	v.SetDefault("core.stealth.fragmentation.length", "50-100")
+	v.SetDefault("core.stealth.fragmentation.delay", "10-20")
+	v.SetDefault("core.stealth.fragmentation.max_split", "2-4")
 	v.SetDefault("core.stealth.awg.enabled", false)
 	v.SetDefault("core.stealth.awg.port", 51820)
 	v.SetDefault("core.stealth.awg.subnet", "10.8.0.0/24")

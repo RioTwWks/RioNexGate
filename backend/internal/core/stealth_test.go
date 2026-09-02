@@ -188,6 +188,26 @@ func TestGetClientLinkProfiles(t *testing.T) {
 	}
 }
 
+func TestGenerateStealthXrayConfigNoFragmentationOnReality(t *testing.T) {
+	users := []models.User{{UUID: "uuid-1", Email: "a@example.com"}}
+	stealth := testStealthConfig()
+	stealth.Fragmentation = config.StealthFragmentationConfig{Enabled: true, Strategy: "serverhello"}
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, stealth, MultihopData{})
+	if err != nil { t.Fatal(err) }
+	if strings.Contains(string(data), `"finalmask"`) { t.Fatal("finalmask must not be on REALITY inbounds") }
+}
+
+func TestGenerateStealthXrayConfigFragmentationOnTLS(t *testing.T) {
+	users := []models.User{{UUID: "uuid-1", Email: "a@example.com"}}
+	stealth := testStealthConfig()
+	stealth.TLS = config.StealthTLSConfig{Enabled: true, Port: 2053, SNI: "tls.example.com", Tag: "vless-tls"}
+	stealth.Fragmentation = config.StealthFragmentationConfig{Enabled: true, Strategy: "serverhello", Length: "60-120"}
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, stealth, MultihopData{})
+	if err != nil { t.Fatal(err) }
+	if !strings.Contains(string(data), `"packets": "tlshello"`) { t.Fatal("expected tlshello fragmentation") }
+}
+
+
 func TestEncodeSubscription(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
 	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil)

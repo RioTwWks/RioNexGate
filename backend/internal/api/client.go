@@ -156,6 +156,10 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, error) {
 	entry, _ := h.db.ResolveUserEntryNode(user)
+	var peer *models.WireGuardPeer
+	if h.cfg.Core.Stealth.AWGActive() {
+		peer, _ = h.db.EnsureWireGuardPeer(user.ID, h.cfg.Core.Stealth.AWG.SubnetOrDefault())
+	}
 	return core.BuildClientConfig(
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
@@ -163,6 +167,7 @@ func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, erro
 		h.cfg.Server.ClientSOCKS5Port,
 		&h.cfg.Core.Stealth,
 		entry,
+		peer,
 	)
 }
 

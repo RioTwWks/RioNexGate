@@ -31,6 +31,11 @@ func renderTemplate(name string, data templateData) ([]byte, error) {
 		"jsonStrings":   jsonStringList,
 		"stealthSNI":    stealthPrimarySNI,
 		"stealthActive": stealthIsActive,
+		"stealthFragmentationTLS": stealthFragmentationTLS,
+		"stealthFragmentPackets": stealthFragmentPackets,
+		"stealthFragmentLength": stealthFragmentLength,
+		"stealthFragmentDelay": stealthFragmentDelay,
+		"stealthFragmentMaxSplit": stealthFragmentMaxSplit,
 	}
 	tmpl, err := template.New(name).Funcs(funcMap).Parse(string(content))
 	if err != nil {
@@ -52,6 +57,25 @@ func stealthPrimarySNI(s *config.StealthConfig) string {
 		return ""
 	}
 	return s.PrimarySNI()
+}
+
+
+func stealthFragmentationTLS(s *config.StealthConfig) bool { return s != nil && s.FragmentationApplicable() }
+func stealthFragmentPackets(s *config.StealthConfig) string {
+	if s == nil { return "tlshello" }
+	return s.Fragmentation.PacketsValue()
+}
+func stealthFragmentLength(s *config.StealthConfig) string {
+	if s == nil { return "50-100" }
+	return s.Fragmentation.LengthOrDefault()
+}
+func stealthFragmentDelay(s *config.StealthConfig) string {
+	if s == nil { return "10-20" }
+	return s.Fragmentation.DelayOrDefault()
+}
+func stealthFragmentMaxSplit(s *config.StealthConfig) string {
+	if s == nil { return "2-4" }
+	return s.Fragmentation.MaxSplitOrDefault()
 }
 
 func jsonStringList(items []string) string {

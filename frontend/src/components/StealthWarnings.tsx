@@ -44,10 +44,16 @@ function collectWarnings(settings: StealthSettings): Warning[] {
   }
 
   if (fragmentation.enabled && fragmentation.strategy && fragmentation.strategy !== 'serverhello') {
-    warnings.push({
-      severity: 'warning',
-      message: 'Aggressive fragmentation of all packets increases PPS anomalies. Fragment only ServerHello when possible.',
-    });
+    warnings.push({ severity: 'warning', message: 'Aggressive fragmentation of all packets increases PPS anomalies. Fragment only ServerHello when possible.' });
+  }
+  if (fragmentation.enabled && fragmentation.aggressive) {
+    warnings.push({ severity: 'warning', message: 'Fragment length or strategy is aggressive. Prefer serverhello with length 50-100 and max_split 2-4.' });
+  }
+  if (fragmentation.enabled && fragmentation.limitation) {
+    warnings.push({ severity: 'warning', message: fragmentation.limitation });
+  }
+  if (fragmentation.enabled && !fragmentation.applicable) {
+    warnings.push({ severity: 'warning', message: 'ServerHello fragmentation is configured but not applied: enable the VLESS+TLS preset inbound.' });
   }
 
   if (!reality.dest) {

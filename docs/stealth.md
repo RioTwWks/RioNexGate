@@ -68,6 +68,12 @@ curl -vI --connect-timeout 5 "https://cdn.example.com"
 
 Default `firefox` or `edge`. Configurable via `core.stealth.fingerprint`. Passed to clients as `fp=` in VLESS URLs.
 
+### ServerHello fragmentation (`core.stealth.fragmentation`)
+
+Xray **v26.3.27** supports `finalmask.fragment` with `packets: tlshello` (first TLS record) or `1-3` (aggressive). Defaults: disabled, `length: 50-100`, `delay: 10-20`, `max_split: 2-4`.
+
+**Partial:** REALITY inbounds cannot use finalmask yet — crashes Xray ([#6453](https://github.com/XTLS/Xray-core/issues/6453)). Fragmentation is emitted only on VLESS+TLS inbound. Panel: `GET`/`PUT` `/api/stealth/settings`.
+
 ## Deployment
 
 1. Enable `core.stealth` in `backend/config.yaml`.
@@ -118,10 +124,9 @@ When the client config endpoint exists, each user profile should appear as:
 
 ## Not in scope (yet)
 
-- ServerHello fragmentation (upstream Xray option — enable when supported in pinned version)
+- ServerHello fragmentation on REALITY inbounds (upstream crash)
 - Multi-hop node chains (`Node` entry/exit)
 - AmneziaWG sidecar
-- Panel UI for stealth settings (section 9 of tasks)
 
 ## Threat model (server side)
 
