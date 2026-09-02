@@ -158,6 +158,61 @@
     {
       "protocol": "freedom",
       "tag": "direct"
-    }
-  ]
+    }{{- if .Multihop.Enabled}},{{range $i, $ob := .Multihop.Outbounds}}{{if $i}},{{end}}
+    {
+      "protocol": "{{$ob.Node.Protocol}}",
+      "tag": "{{$ob.Tag}}",
+      "settings": {
+        "vnext": [
+          {
+            "address": "{{$ob.Node.Address}}",
+            "port": {{$ob.Node.Port}},
+            "users": [
+              {
+                "id": "{{$ob.Creds.UUID}}",
+                "encryption": "{{$ob.Creds.EncryptionOrDefault}}"{{if $ob.Creds.Flow}},
+                "flow": "{{$ob.Creds.Flow}}"{{end}}
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "{{$ob.Creds.NetworkOrDefault}}",
+        "security": "{{$ob.Creds.SecurityOrDefault}}"{{if eq $ob.Creds.SecurityOrDefault "reality"}},
+        "realitySettings": {
+          "serverName": "{{if $ob.Creds.SNI}}{{$ob.Creds.SNI}}{{else}}{{$ob.Node.Address}}{{end}}",
+          "fingerprint": "{{$ob.Creds.FingerprintOrDefault}}",
+          "publicKey": "{{$ob.Creds.PublicKey}}",
+          "shortId": "{{$ob.Creds.ShortID}}"
+        }{{end}}{{if eq $ob.Creds.NetworkOrDefault "xhttp"}},
+        "xhttpSettings": {
+          "path": "{{$ob.Creds.Path}}",
+          "mode": "{{$ob.Creds.Mode}}"
+        }{{end}}
+      }
+    },
+    {
+      "protocol": "freedom",
+      "tag": "{{$ob.Tag}}-chain",
+      "settings": {
+        "domainStrategy": "AsIs"
+      },
+      "proxySettings": {
+        "tag": "{{$ob.Tag}}"
+      }
+    }{{end}}{{end}}
+  ]{{- if .Multihop.Enabled}},
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+{{- range $i, $rule := .Multihop.Routings}}{{if $i}},{{end}}
+      {
+        "type": "field",
+        "user": [{{range $j, $email := $rule.UserEmails}}{{if $j}}, {{end}}"{{$email}}"{{end}}],
+        "outboundTag": "{{$rule.OutboundTag}}-chain"
+      }
+{{- end}}
+    ]
+  }{{- end}}
 }

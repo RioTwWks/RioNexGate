@@ -66,13 +66,27 @@ func (m *manager) Reload() error {
 		return err
 	}
 
+	exitNodes, err := m.db.ListActiveNodesByRole(models.NodeRoleExit)
+	if err != nil {
+		return err
+	}
+
+	resolveExit := func(user models.User) *models.Node {
+		node, err := m.db.ResolveUserExitNode(&user)
+		if err != nil {
+			return nil
+		}
+		return node
+	}
+	multihop := BuildMultihopData(&m.cfg.Core.Multihop, users, exitNodes, resolveExit)
+
 	var data []byte
 	listenPort := m.cfg.Core.ListenPort
 	stealth := &m.cfg.Core.Stealth
 	if m.Type() == "sing-box" {
-		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users, stealth)
+		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users, stealth, multihop)
 	} else {
-		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users, stealth)
+		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users, stealth, multihop)
 	}
 	if err != nil {
 		return err
@@ -105,22 +119,25 @@ func (m *manager) GetStats(userID string) (float64, error) {
 }
 
 func (m *manager) GetClientLink(userID string, protocol string) (string, error) {
-	var user *models.User
-	var err error
-	var id uint
-	if _, scanErr := fmt.Sscanf(userID, "%d", &id); scanErr == nil {
-		user, err = m.db.GetUser(id)
-	} else {
-		user, err = m.db.GetUserByUUID(userID)
-	}
+	user, err := m.getUserByID(userID)
 	if err != nil {
 		return "", err
 	}
-	link := GetClientLink(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, *user, protocol, &m.cfg.Core.Stealth)
+	ep := m.clientEndpoint(*user)
+	link := GetClientLink(ep.Host, ep.Port, *user, protocol, &m.cfg.Core.Stealth)
 	return link, nil
 }
 
 func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
+	user, err := m.getUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	ep := m.clientEndpoint(*user)
+	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth), nil
+}
+
+func (m *manager) getUserByID(userID string) (*models.User, error) {
 	var user *models.User
 	var err error
 	var id uint
@@ -129,10 +146,15 @@ func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
 	} else {
 		user, err = m.db.GetUserByUUID(userID)
 	}
+	return user, err
+}
+
+func (m *manager) clientEndpoint(user models.User) ClientEndpoint {
+	entry, err := m.db.ResolveUserEntryNode(&user)
 	if err != nil {
-		return nil, err
+		return ResolveClientEndpoint(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, user, nil)
 	}
-	return GetClientLinkProfiles(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, *user, &m.cfg.Core.Stealth), nil
+	return ResolveClientEndpoint(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, user, entry)
 }
 
 func (m *manager) StartStatsCollector(ctx context.Context) {

@@ -11,5 +11,7 @@ type User struct {
 	UsedBytes         int64     `json:"-"`
 	ExpiresAt         time.Time `json:"expires_at"`
 	Active            bool      `gorm:"default:true" json:"active"`
+	EntryNodeID       *uint     `json:"entry_node_id,omitempty"`
+	ExitNodeID        *uint     `json:"exit_node_id,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 }

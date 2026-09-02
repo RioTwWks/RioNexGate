@@ -268,6 +268,95 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientMetrics"
+  /users/{id}/chain:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    put:
+      summary: Bind user to entry/exit node chain
+      tags: [Users]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserChainRequest"
+      responses:
+        "200":
+          description: Updated user with chain binding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /nodes:
+    get:
+      summary: List nodes
+      tags: [Nodes]
+      responses:
+        "200":
+          description: Node list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Node"
+    post:
+      summary: Create node
+      tags: [Nodes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNodeRequest"
+      responses:
+        "201":
+          description: Created node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /nodes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/NodeID"
+    get:
+      summary: Get node
+      tags: [Nodes]
+      responses:
+        "200":
+          description: Node details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update node
+      tags: [Nodes]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNodeRequest"
+      responses:
+        "200":
+          description: Updated node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+    delete:
+      summary: Delete node
+      tags: [Nodes]
+      responses:
+        "204":
+          description: Deleted
   /users/{id}/qr:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -371,6 +460,13 @@ components:
       required: true
       schema:
         type: string
+    NodeID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
   schemas:
     User:
       type: object
@@ -394,6 +490,12 @@ components:
           format: date-time
         active:
           type: boolean
+        entry_node_id:
+          type: integer
+          nullable: true
+        exit_node_id:
+          type: integer
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -419,6 +521,95 @@ components:
         expire_days:
           type: integer
         active:
+          type: boolean
+        entry_node_id:
+          type: integer
+          nullable: true
+        exit_node_id:
+          type: integer
+          nullable: true
+        clear_chain:
+          type: boolean
+    Node:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        port:
+          type: integer
+        active:
+          type: boolean
+        role:
+          type: string
+          enum: [entry, exit]
+        protocol:
+          type: string
+          example: vless
+        credentials:
+          type: string
+          description: JSON relay credentials (uuid, reality keys, etc.)
+        region:
+          type: string
+        priority:
+          type: integer
+    CreateNodeRequest:
+      type: object
+      required: [name, address, port]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        port:
+          type: integer
+        active:
+          type: boolean
+        role:
+          type: string
+          enum: [entry, exit]
+        protocol:
+          type: string
+        credentials:
+          type: string
+        region:
+          type: string
+        priority:
+          type: integer
+    UpdateNodeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        port:
+          type: integer
+        active:
+          type: boolean
+        role:
+          type: string
+        protocol:
+          type: string
+        credentials:
+          type: string
+        region:
+          type: string
+        priority:
+          type: integer
+    UserChainRequest:
+      type: object
+      properties:
+        entry_node_id:
+          type: integer
+          nullable: true
+        exit_node_id:
+          type: integer
+          nullable: true
+        clear:
           type: boolean
     TotalStats:
       type: object

@@ -27,13 +27,24 @@ type DatabaseConfig struct {
 }
 
 type CoreConfig struct {
-	Type       string        `mapstructure:"type"`
-	ListenPort int           `mapstructure:"listen_port"`
-	PublicHost string        `mapstructure:"public_host"`
-	Xray       XrayConfig    `mapstructure:"xray"`
-	Singbox    SingboxConfig `mapstructure:"singbox"`
-	Stealth    StealthConfig `mapstructure:"stealth"`
-	StatsPoll  int           `mapstructure:"stats_poll_seconds"`
+	Type       string         `mapstructure:"type"`
+	ListenPort int            `mapstructure:"listen_port"`
+	PublicHost string         `mapstructure:"public_host"`
+	Xray       XrayConfig     `mapstructure:"xray"`
+	Singbox    SingboxConfig  `mapstructure:"singbox"`
+	Stealth    StealthConfig  `mapstructure:"stealth"`
+	Multihop   MultihopConfig `mapstructure:"multihop"`
+	StatsPoll  int            `mapstructure:"stats_poll_seconds"`
+}
+
+// MultihopConfig controls entry→exit chain generation on the local core.
+type MultihopConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	LocalRole string `mapstructure:"local_role"`
+}
+
+func (m *MultihopConfig) IsEntryNode() bool {
+	return m.Enabled && m.LocalRole == "entry"
 }
 
 type XrayConfig struct {
@@ -168,6 +179,8 @@ func Load() (*Config, error) {
 	v.SetDefault("core.stealth.tls.port", 2053)
 	v.SetDefault("core.stealth.tls.alpn", []string{"h2", "http/1.1"})
 	v.SetDefault("core.stealth.tls.tag", "vless-tls")
+	v.SetDefault("core.multihop.enabled", false)
+	v.SetDefault("core.multihop.local_role", "entry")
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, err

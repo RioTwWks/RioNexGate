@@ -153,12 +153,14 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, error) {
+	entry, _ := h.db.ResolveUserEntryNode(user)
 	return core.BuildClientConfig(
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
 		*user,
 		h.cfg.Server.ClientSOCKS5Port,
 		&h.cfg.Core.Stealth,
+		entry,
 	)
 }
 
@@ -229,11 +231,14 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	entry, _ := h.db.ResolveUserEntryNode(user)
+
 	payload := core.BuildSubscriptionBase64Graceful(
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
 		*user,
 		&h.cfg.Core.Stealth,
+		entry,
 	)
 
 	if _, err := base64.StdEncoding.DecodeString(payload); err != nil {

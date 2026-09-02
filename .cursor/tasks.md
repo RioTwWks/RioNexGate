@@ -222,10 +222,10 @@
 
 Модель `Node` уже есть — использовать для схемы «клиент → узел в РФ → узел за рубежом → интернет».
 
-- [ ] Расширить модель `Node`: `role` (`entry` / `exit`), `protocol`, `credentials`, `region`, `priority`.
-- [ ] Генерация outbound `freedom` / `vless` / `chain` в xray-конфиге entry-узла на exit-узел.
-- [ ] API CRUD для узлов + привязка пользователей к цепочке (опционально).
-- [ ] В подписке и `/api/client/config` — отдавать entry-точку как основную, exit — прозрачно на сервере.
+- [x] Расширить модель `Node`: `role` (`entry` / `exit`), `protocol`, `credentials`, `region`, `priority`.
+- [x] Генерация outbound `freedom` / `vless` / `chain` в xray-конфиге entry-узла на exit-узел.
+- [x] API CRUD для узлов + привязка пользователей к цепочке (опционально).
+- [x] В подписке и `/api/client/config` — отдавать entry-точку как основную, exit — прозрачно на сервере.
 - [ ] UI: схема топологии, health-check узлов, переключение active/inactive.
 
 ---

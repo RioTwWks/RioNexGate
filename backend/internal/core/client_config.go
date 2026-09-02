@@ -45,16 +45,17 @@ type ClientConfig struct {
 	DNS        ClientDNS      `json:"dns"`
 }
 
-func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig) (*ClientConfig, error) {
+func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry *models.Node) (*ClientConfig, error) {
+	ep := ResolveClientEndpoint(host, port, user, entry)
 	servers := make([]ClientServer, 0, len(SupportedProtocols))
 	for _, proto := range SupportedProtocols {
-		link := GetClientLink(host, port, user, proto, stealth)
+		link := GetClientLink(ep.Host, ep.Port, user, proto, stealth)
 		srv := ClientServer{
 			Protocol: proto,
 			Link:     link,
 			ID:       user.UUID,
-			Host:     host,
-			Port:     port,
+			Host:     ep.Host,
+			Port:     ep.Port,
 		}
 		switch proto {
 		case "vless":
