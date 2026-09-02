@@ -5,6 +5,7 @@ test.describe('Multi-hop nodes', () => {
     await page.goto('/login');
     await page.getByPlaceholder('API key').fill(API_KEY);
     await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page).toHaveURL(/\/$/);
   });
   test('nodes page loads', async ({ page }) => {
     await page.goto('/nodes');
