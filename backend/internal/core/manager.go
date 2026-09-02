@@ -100,7 +100,19 @@ func (m *manager) Reload() error {
 		return err
 	}
 	log.Printf("core config written to %s (%d users)", path, len(users))
+	_ = m.reloadAWGConfig(users)
 	return nil
+}
+
+func (m *manager) reloadAWGConfig(users []models.User) error {
+	awg := &m.cfg.Core.Stealth.AWG
+	if !awg.Enabled || awg.PrivateKey == "" || awg.PublicKey == "" { return nil }
+	ids := make([]uint, len(users))
+	for i, u := range users { ids[i] = u.ID; if _, err := m.db.EnsureWireGuardPeer(u.ID, awg.SubnetOrDefault()); err != nil { return err } }
+	peers, err := m.db.ListWireGuardPeersForUsers(ids); if err != nil { return err }
+	data, err := BuildAWGServerConfig(awg, users, peers); if err != nil { return err }
+	p := awg.ConfigPathOrDefault(); if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { return err }
+	return os.WriteFile(p, data, 0o644)
 }
 
 func (m *manager) GetStats(userID string) (float64, error) {
@@ -134,7 +146,9 @@ func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
 		return nil, err
 	}
 	ep := m.clientEndpoint(*user)
-	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth), nil
+	var peer *models.WireGuardPeer
+	if m.cfg.Core.Stealth.AWGActive() { peer, _ = m.db.EnsureWireGuardPeer(user.ID, m.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
+	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer), nil
 }
 
 func (m *manager) getUserByID(userID string) (*models.User, error) {

@@ -176,7 +176,7 @@ func TestBuildVLESSTLSLink(t *testing.T) {
 func TestGetClientLinkProfiles(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
 	stealth := testStealthConfig()
-	profiles := GetClientLinkProfiles("host.example", 443, user, stealth)
+	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil)
 	if len(profiles) != 2 {
 		t.Fatalf("expected 2 profiles, got %d", len(profiles))
 	}
@@ -190,7 +190,7 @@ func TestGetClientLinkProfiles(t *testing.T) {
 
 func TestEncodeSubscription(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig())
+	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil)
 	encoded := EncodeSubscription(profiles)
 	if encoded == "" {
 		t.Fatal("empty subscription")

@@ -193,6 +193,7 @@ func (h *Handler) GetUserProfiles(w http.ResponseWriter, r *http.Request) {
 		Tags      []string `json:"tags"`
 		Priority  int      `json:"priority"`
 		Link      string   `json:"link"`
+		Config    string   `json:"config,omitempty"`
 	}
 	dtos := make([]profileDTO, 0, len(profiles))
 	for _, p := range profiles {
@@ -215,6 +216,7 @@ func (h *Handler) GetUserProfiles(w http.ResponseWriter, r *http.Request) {
 			Tags:      tags,
 			Priority:  p.Priority,
 			Link:      p.Link,
+			Config:    p.Config,
 		})
 	}
 	writeJSON(w, http.StatusOK, dtos)

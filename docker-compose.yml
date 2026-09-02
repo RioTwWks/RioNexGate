@@ -88,3 +88,12 @@ services:
     command: ["run", "-c", "/etc/sing-box/config.json"]
     restart: unless-stopped
     network_mode: host
+
+  amneziawg:
+    profiles: ["awg"]
+    image: amneziavpn/amneziawg-go:latest
+    pull_policy: if_not_present
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    volumes: ["./data/awg:/etc/amneziawg"]
+    ports: ["${AWG_PORT:-51820}:51820/udp"]
+    restart: unless-stopped

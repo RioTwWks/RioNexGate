@@ -53,7 +53,7 @@ func stealthSettingsFromConfig(s *config.StealthConfig) StealthSettingsDTO {
 	dto.Presets.XHTTPReality = TransportPresetDTO{Enabled: s.XHTTP.Enabled, Port: s.XHTTP.Port}
 	dto.Presets.VisionReality = TransportPresetDTO{Enabled: s.Vision.Enabled, Port: s.Vision.Port}
 	dto.Presets.TLS = TransportPresetDTO{Enabled: s.TLS.Enabled, Port: s.TLS.Port}
-	dto.Presets.AmneziaWG = TransportPresetDTO{Enabled: false, Port: 51820}
+	dto.Presets.AmneziaWG = TransportPresetDTO{Enabled: s.AWG.Enabled, Port: s.AWG.PortOrDefault()}
 	dto.Reality.Dest = s.Reality.Dest
 	dto.Reality.ServerNames = append([]string(nil), s.Reality.ServerNames...)
 	dto.Reality.Fingerprint = s.FingerprintOrDefault()
@@ -68,7 +68,7 @@ func applyStealthSettings(s *config.StealthConfig, dto StealthSettingsDTO) {
 	if s == nil {
 		return
 	}
-	s.Enabled = dto.Presets.XHTTPReality.Enabled || dto.Presets.VisionReality.Enabled || dto.Presets.TLS.Enabled
+	s.Enabled = dto.Presets.XHTTPReality.Enabled || dto.Presets.VisionReality.Enabled || dto.Presets.TLS.Enabled || dto.Presets.AmneziaWG.Enabled
 	s.XHTTP.Enabled = dto.Presets.XHTTPReality.Enabled
 	if dto.Presets.XHTTPReality.Port > 0 {
 		s.XHTTP.Port = dto.Presets.XHTTPReality.Port
@@ -81,6 +81,8 @@ func applyStealthSettings(s *config.StealthConfig, dto StealthSettingsDTO) {
 	if dto.Presets.TLS.Port > 0 {
 		s.TLS.Port = dto.Presets.TLS.Port
 	}
+	s.AWG.Enabled = dto.Presets.AmneziaWG.Enabled
+	if dto.Presets.AmneziaWG.Port > 0 { s.AWG.Port = dto.Presets.AmneziaWG.Port }
 	s.Reality.Dest = strings.TrimSpace(dto.Reality.Dest)
 	s.Reality.ServerNames = append([]string(nil), dto.Reality.ServerNames...)
 	s.Reality.ShortIDs = append([]string(nil), dto.Reality.ShortIDs...)
