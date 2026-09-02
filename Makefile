@@ -39,8 +39,11 @@ dev-local:
 	@echo "Migrate DB first (once): make -C backend migrate"
 
 test:
-	cd backend && go test ./...
+	cd backend && CGO_ENABLED=1 go test ./...
 	cd frontend && npm test --if-present
+
+test-e2e:
+	cd e2e && npm ci && npx playwright install chromium && npm test
 
 migrate: docker-check
 	$(DOCKER_COMPOSE) exec backend ./proxy-mgr migrate

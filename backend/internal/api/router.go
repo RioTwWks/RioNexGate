@@ -27,8 +27,11 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", h.Health)
+		r.Get("/docs", h.SwaggerUI)
+		r.Get("/openapi.yaml", h.OpenAPISpec)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.APIKeyAuth(cfg.Server.APIKey))
+			r.Get("/protocols", h.ListProtocols)
 			r.Get("/users", h.ListUsers)
 			r.Post("/users", h.CreateUser)
 			r.Get("/users/{id}", h.GetUser)

@@ -1,0 +1,341 @@
+openapi: 3.0.3
+info:
+  title: proxy-mgr API
+  description: REST API for proxy-mgr panel (Xray-core / sing-box management)
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Relative to panel origin (e.g. http://localhost:8888/api)
+security:
+  - ApiKeyAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      tags: [System]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  core:
+                    type: string
+                    example: xray
+  /docs:
+    get:
+      summary: Swagger UI
+      security: []
+      tags: [System]
+      responses:
+        "200":
+          description: HTML Swagger UI page
+  /openapi.yaml:
+    get:
+      summary: OpenAPI specification
+      security: []
+      tags: [System]
+      responses:
+        "200":
+          description: OpenAPI YAML document
+  /protocols:
+    get:
+      summary: Supported client link protocols
+      tags: [System]
+      responses:
+        "200":
+          description: List of protocol identifiers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  protocols:
+                    type: array
+                    items:
+                      type: string
+                    example: [vless, vmess, trojan]
+  /users:
+    get:
+      summary: List users
+      tags: [Users]
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      summary: Get user
+      tags: [Users]
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update user
+      tags: [Users]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      summary: Delete user
+      tags: [Users]
+      responses:
+        "204":
+          description: Deleted
+  /users/{id}/link:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - name: proto
+        in: query
+        schema:
+          type: string
+          enum: [vless, vmess, trojan]
+          default: vless
+        description: Client protocol for the connection link
+    get:
+      summary: Get client connection link
+      tags: [Users]
+      responses:
+        "200":
+          description: Connection URI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  link:
+                    type: string
+                  protocol:
+                    type: string
+  /users/{id}/qr:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - name: proto
+        in: query
+        schema:
+          type: string
+          enum: [vless, vmess, trojan]
+          default: vless
+    get:
+      summary: Get QR code for connection link
+      tags: [Users]
+      responses:
+        "200":
+          description: PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+  /stats/total:
+    get:
+      summary: Total traffic statistics
+      tags: [Stats]
+      responses:
+        "200":
+          description: Aggregated stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotalStats"
+  /stats/user/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      summary: Per-user traffic statistics
+      tags: [Stats]
+      responses:
+        "200":
+          description: User traffic history
+  /core/type:
+    get:
+      summary: Get active core type
+      tags: [Core]
+      responses:
+        "200":
+          description: Core type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [xray, sing-box]
+    put:
+      summary: Switch core type
+      tags: [Core]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [xray, sing-box]
+      responses:
+        "200":
+          description: Core switched
+  /core/reload:
+    post:
+      summary: Regenerate and reload core config
+      tags: [Core]
+      responses:
+        "200":
+          description: Reload triggered
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  parameters:
+    UserID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        traffic_gb:
+          type: integer
+          format: int64
+        used_gb:
+          type: number
+          format: double
+        expires_at:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    CreateUserRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        traffic_gb:
+          type: integer
+          format: int64
+        expire_days:
+          type: integer
+    UpdateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        traffic_gb:
+          type: integer
+        expire_days:
+          type: integer
+        active:
+          type: boolean
+    TotalStats:
+      type: object
+      properties:
+        total_used_gb:
+          type: number
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              time:
+                type: string
+              bytes_up:
+                type: integer
+              bytes_down:
+                type: integer
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
