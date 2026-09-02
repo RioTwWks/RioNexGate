@@ -235,6 +235,12 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 		Servers    []struct {
 			Link string `json:"link"`
 		} `json:"servers"`
+		Profiles []struct {
+			Profile   string `json:"profile"`
+			Transport string `json:"transport"`
+			Priority  int    `json:"priority"`
+			Tags      string `json:"tags"`
+		} `json:"profiles"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&cfg1); err != nil {
 		t.Fatal(err)
@@ -242,6 +248,9 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	resp.Body.Close()
 	if cfg1.ConfigHash == "" || len(cfg1.Servers) == 0 {
 		t.Fatalf("invalid config: %+v", cfg1)
+	}
+	if len(cfg1.Profiles) == 0 || cfg1.Profiles[0].Priority < 1 || cfg1.Profiles[0].Transport == "" {
+		t.Fatalf("invalid profiles in config: %+v", cfg1.Profiles)
 	}
 
 	statsBody := []byte(`{"session_id":"sess-1","bytes_in":1000,"bytes_out":2000,"status":"connected"}`)
@@ -337,5 +346,24 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("commands: expected 200, got %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, base+"/client/commands?timeout=1&stream=sse", nil)
+	deviceHeader(req)
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sseBody, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("commands sse: expected 200, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(string(sseBody), "event: commands") {
+		t.Fatalf("commands sse: missing event, body=%s", sseBody)
 	}
 }

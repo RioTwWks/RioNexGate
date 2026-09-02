@@ -34,6 +34,7 @@ type ClientDNS struct {
 
 type ClientConfigBody struct {
 	Servers  []ClientServer `json:"servers"`
+	Profiles []LinkProfile  `json:"profiles"`
 	Inbounds ClientInbounds `json:"inbounds"`
 	DNS      ClientDNS      `json:"dns"`
 }
@@ -41,6 +42,7 @@ type ClientConfigBody struct {
 type ClientConfig struct {
 	ConfigHash string         `json:"config_hash"`
 	Servers    []ClientServer `json:"servers"`
+	Profiles   []LinkProfile  `json:"profiles"`
 	Inbounds   ClientInbounds `json:"inbounds"`
 	DNS        ClientDNS      `json:"dns"`
 }
@@ -73,8 +75,11 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 		socksPort = 10808
 	}
 
+	profiles := GetClientLinkProfiles(ep.Host, ep.Port, user, stealth)
+
 	body := ClientConfigBody{
-		Servers: servers,
+		Servers:  servers,
+		Profiles: profiles,
 		Inbounds: ClientInbounds{
 			SOCKS5: ClientSOCKS5Inbound{Port: socksPort, Auth: "none"},
 		},
@@ -89,6 +94,7 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 	return &ClientConfig{
 		ConfigHash: hash,
 		Servers:    body.Servers,
+		Profiles:   body.Profiles,
 		Inbounds:   body.Inbounds,
 		DNS:        body.DNS,
 	}, nil
