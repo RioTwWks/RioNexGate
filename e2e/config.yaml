@@ -10,6 +10,25 @@ core:
   listen_port: 443
   public_host: "e2e.test"
   stats_poll_seconds: 3600
+  stealth:
+    enabled: true
+    fingerprint: "firefox"
+    reality:
+      dest: "www.cloudflare.com:443"
+      server_names:
+        - "www.cloudflare.com"
+      private_key: "yAnzWTAeeRWRmnTxxapQpqTII0qh2QA60_qyGP3uYT4"
+      public_key: "mIF9SR10bUsMIpEfF0h2IQCWH89HUBkMqXzxFZXZu8Y"
+      short_ids:
+        - "abcd1234"
+    xhttp:
+      enabled: true
+      port: 443
+      path: "/api/v1/data"
+      mode: "stream-one"
+    vision:
+      enabled: true
+      port: 8443
   xray:
     config_path: "../e2e/data/xray/config.json"
     api_address: "127.0.0.1:10085"

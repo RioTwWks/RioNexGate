@@ -94,6 +94,15 @@ func (d *DB) CreateDevice(userID uint, label string) (*models.Device, error) {
 	return device, nil
 }
 
+func (d *DB) GetDeviceByIDForUser(userID, deviceID uint) (*models.Device, error) {
+	var device models.Device
+	err := d.Where("id = ? AND user_id = ?", deviceID, userID).First(&device).Error
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
+}
+
 func (d *DB) GetDeviceByToken(token string) (*models.Device, error) {
 	var device models.Device
 	err := d.Where("token = ?", token).First(&device).Error
