@@ -33,7 +33,10 @@ func BuildAWGServerConfig(awg *config.StealthAWGConfig, users []models.User, pee
 	content, err := templateFS.ReadFile("templates/awg0.conf.tmpl"); if err != nil { return nil, err }
 	tmpl, err := template.New("awg0.conf.tmpl").Parse(string(content)); if err != nil { return nil, err }
 	var buf bytes.Buffer
-	return buf.Bytes(), tmpl.Execute(&buf, data)
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func BuildAWGClientConfig(host string, awg *config.StealthAWGConfig, peer *models.WireGuardPeer) string {

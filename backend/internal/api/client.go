@@ -161,7 +161,6 @@ func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, erro
 		h.cfg.Server.ClientSOCKS5Port,
 		&h.cfg.Core.Stealth,
 		entry,
-		peer,
 	)
 }
 
