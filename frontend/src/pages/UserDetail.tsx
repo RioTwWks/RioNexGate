@@ -7,6 +7,7 @@ import {
   revokeDevice,
 } from '../services/api';
 import { SyncStatusBadge } from '../components/SyncStatusBadge';
+import { UserChainSection } from '../components/UserChainSection';
 import type { Device } from '../types/device';
 import { getSyncStatus } from '../types/device';
 import type { ProfileLink } from '../types/stealth';
@@ -113,6 +114,8 @@ export function UserDetail({ userId }: Props) {
       </div>
 
       {error && <p className="text-red-400">{error}</p>}
+
+      <UserChainSection user={user} onUpdated={setUser} />
 
       {/* Subscription URL */}
       <section className="bg-slate-900 border border-slate-800 rounded-lg p-5">

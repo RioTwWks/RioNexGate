@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Device } from '../types/device';
+import type { CreateNodeInput, Node, NodeHealthResult, UpdateNodeInput } from '../types/node';
 import type { DestTestResult, ProfileLink, StealthSettings } from '../types/stealth';
 import type { User } from '../types/user';
 
@@ -124,4 +125,13 @@ export async function testDestAvailability(dest: string): Promise<DestTestResult
   return res.data;
 }
 
+export async function getNodes(): Promise<Node[]> { const res = await api.get<Node[]>('/nodes'); return res.data; }
+export async function createNode(input: CreateNodeInput): Promise<Node> { const res = await api.post<Node>('/nodes', input); return res.data; }
+export async function updateNode(id: number, input: UpdateNodeInput): Promise<Node> { const res = await api.put<Node>(`/nodes/${id}`, input); return res.data; }
+export async function deleteNode(id: number): Promise<void> { await api.delete(`/nodes/${id}`); }
+export async function checkNodeHealth(id: number): Promise<NodeHealthResult> { const res = await api.get<NodeHealthResult>(`/nodes/${id}/health`); return res.data; }
+export async function updateUserChain(userId: number, chain: { entry_node_id?: number | null; exit_node_id?: number | null; clear?: boolean }): Promise<User> {
+  const payload: Record<string, unknown> = {}; if (chain.clear) payload.clear = true; else { if (chain.entry_node_id !== undefined) payload.entry_node_id = chain.entry_node_id; if (chain.exit_node_id !== undefined) payload.exit_node_id = chain.exit_node_id; }
+  const res = await api.put<User>(`/users/${userId}/chain`, payload); return res.data;
+}
 export default api;

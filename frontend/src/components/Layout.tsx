@@ -4,6 +4,7 @@ import { clearApiKey } from '../services/api';
 const nav = [
   { to: '/', label: 'Dashboard' },
   { to: '/users', label: 'Users' },
+  { to: '/nodes', label: 'Nodes' },
   { to: '/stealth', label: 'Stealth' },
   { to: '/settings', label: 'Settings' },
 ];

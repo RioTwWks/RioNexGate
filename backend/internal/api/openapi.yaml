@@ -367,6 +367,21 @@ paths:
       responses:
         "204":
           description: Deleted
+  /nodes/{id}/health:
+    parameters:
+      - $ref: "#/components/parameters/NodeID"
+    get:
+      summary: TCP health check for node
+      tags: [Nodes]
+      responses:
+        "200":
+          description: Health check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeHealthResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /users/{id}/qr:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -610,6 +625,18 @@ components:
           type: string
         priority:
           type: integer
+    NodeHealthResponse:
+      type: object
+      properties:
+        reachable:
+          type: boolean
+        check_type:
+          type: string
+        latency_ms:
+          type: integer
+          format: int64
+        error:
+          type: string
     UserChainRequest:
       type: object
       properties:

@@ -1,8 +1,12 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"rionexgate/internal/db"
 	"rionexgate/internal/models"
@@ -66,6 +70,13 @@ type UserChainRequest struct {
 	EntryNodeID *uint `json:"entry_node_id"`
 	ExitNodeID  *uint `json:"exit_node_id"`
 	Clear       bool  `json:"clear"`
+}
+
+type NodeHealthResponse struct {
+	Reachable bool   `json:"reachable"`
+	CheckType string `json:"check_type"`
+	LatencyMS int64  `json:"latency_ms,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 func (h *Handler) ListNodes(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +164,34 @@ func (h *Handler) UpdateNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toNodeDTO(*node))
+}
+
+func (h *Handler) CheckNodeHealth(w http.ResponseWriter, r *http.Request) {
+	node, err := h.getNodeParam(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "node not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, checkNodeTCP(r.Context(), node.Address, node.Port))
+}
+
+func checkNodeTCP(ctx context.Context, address string, port int) NodeHealthResponse {
+	if address == "" {
+		return NodeHealthResponse{CheckType: "tcp", Error: "address is empty"}
+	}
+	if port <= 0 || port > 65535 {
+		return NodeHealthResponse{CheckType: "tcp", Error: "invalid port"}
+	}
+	target := net.JoinHostPort(address, fmt.Sprintf("%d", port))
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	start := time.Now()
+	conn, err := dialer.DialContext(ctx, "tcp", target)
+	latency := time.Since(start).Milliseconds()
+	if err != nil {
+		return NodeHealthResponse{CheckType: "tcp", Error: err.Error(), LatencyMS: latency}
+	}
+	_ = conn.Close()
+	return NodeHealthResponse{Reachable: true, CheckType: "tcp", LatencyMS: latency}
 }
 
 func (h *Handler) DeleteNode(w http.ResponseWriter, r *http.Request) {
