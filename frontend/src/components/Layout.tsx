@@ -4,6 +4,7 @@ import { clearApiKey } from '../services/api';
 const nav = [
   { to: '/', label: 'Dashboard' },
   { to: '/users', label: 'Users' },
+  { to: '/stealth', label: 'Stealth' },
   { to: '/settings', label: 'Settings' },
 ];
 
@@ -25,7 +26,8 @@ export function Layout() {
               key={item.to}
               to={item.to}
               className={`px-3 py-2 rounded ${
-                location.pathname === item.to
+                location.pathname === item.to ||
+                (item.to !== '/' && location.pathname.startsWith(item.to))
                   ? 'bg-sky-600 text-white'
                   : 'text-slate-300 hover:bg-slate-800'
               }`}
