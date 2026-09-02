@@ -16,8 +16,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port   int    `mapstructure:"port"`
-	APIKey string `mapstructure:"api_key"`
+	Port             int    `mapstructure:"port"`
+	APIKey           string `mapstructure:"api_key"`
+	PublicBaseURL    string `mapstructure:"public_base_url"`
+	ClientSOCKS5Port int    `mapstructure:"client_socks5_port"`
 }
 
 type DatabaseConfig struct {
@@ -70,6 +72,7 @@ func Load() (*Config, error) {
 	v.SetDefault("core.stats_poll_seconds", 60)
 	v.SetDefault("limits.default_traffic_gb", 50)
 	v.SetDefault("limits.default_expire_days", 30)
+	v.SetDefault("server.client_socks5_port", 10808)
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, err
@@ -94,6 +97,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.Core.StatsPoll == 0 {
 		cfg.Core.StatsPoll = 60
+	}
+	if cfg.Server.ClientSOCKS5Port == 0 {
+		cfg.Server.ClientSOCKS5Port = 10808
 	}
 
 	return &cfg, nil

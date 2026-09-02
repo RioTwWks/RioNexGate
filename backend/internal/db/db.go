@@ -29,7 +29,16 @@ func Open(path string) (*DB, error) {
 }
 
 func (d *DB) AutoMigrate() error {
-	return d.DB.AutoMigrate(&models.User{}, &models.Traffic{}, &models.Node{})
+	if err := d.DB.AutoMigrate(
+		&models.User{},
+		&models.Traffic{},
+		&models.Node{},
+		&models.Device{},
+		&models.ClientStatsReport{},
+	); err != nil {
+		return err
+	}
+	return d.BackfillSubscriptionTokens()
 }
 
 func (d *DB) SeedDefaultNode() error {
@@ -86,6 +95,11 @@ func (d *DB) CreateUser(in CreateUserInput) (*models.User, error) {
 		ExpiresAt: expires,
 		Active:    true,
 	}
+	subToken, err := generateToken(32)
+	if err != nil {
+		return nil, err
+	}
+	user.SubscriptionToken = subToken
 	if err := d.Create(user).Error; err != nil {
 		return nil, err
 	}
@@ -128,6 +142,18 @@ func (d *DB) UpdateUser(id uint, in UpdateUserInput) (*models.User, error) {
 func (d *DB) DeleteUser(id uint) error {
 	return d.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("user_id = ?", id).Delete(&models.Traffic{}).Error; err != nil {
+			return err
+		}
+		var devices []models.Device
+		if err := tx.Where("user_id = ?", id).Find(&devices).Error; err != nil {
+			return err
+		}
+		for _, dev := range devices {
+			if err := tx.Where("device_token = ?", dev.Token).Delete(&models.ClientStatsReport{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&models.Device{}).Error; err != nil {
 			return err
 		}
 		return tx.Delete(&models.User{}, id).Error
