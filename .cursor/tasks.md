@@ -159,3 +159,143 @@
 4. `POST /api/client/stats` с дедупликацией.
 5. `GET /api/client/commands` (long polling → при необходимости SSE/WebSocket).
 6. OpenAPI, интеграционные тесты, UI для subscription URL и устройств.
+
+---
+
+## Устойчивость к DPI / ТСПУ (серверная часть)
+
+**Цель:** proxy-mgr генерирует и разворачивает конфигурации, устойчивые к современному DPI (2026), оставаясь на **официальном Xray-core** (и sing-box где применимо). Клиентские доработки (uTLS, split tunneling, auto-fallback) — в репозитории RioNexTunnel.
+
+**Стратегическое решение по ядру:**
+- **Не использовать** заброшенный форк [fwflunky/REALITY-rkn-fix](https://github.com/fwflunky/REALITY-rkn-fix) в production — нет тестов, нет поддержки, риск отставания от upstream.
+- **Не вести собственный форк** Xray-core без крайней необходимости — постоянный merge с upstream, ответственность за безопасность.
+- **Использовать официальный Xray-core** с актуальными настройками транспортов; идеи форка (динамические сертификаты, `ImpersonateCert`) изучать как reference и отслеживать появление аналогов в [XTLS/Xray-core](https://github.com/XTLS/Xray-core) (issues/PR).
+
+### Контекст: угрозы, с которыми борется серверная конфигурация
+
+- **Сигнатурный анализ** — статичная структура TLS-сертификата Reality, типичные отпечатки VLESS+Reality на TCP.
+- **Атака на TLS-рукопожатие** — аномально долгое handshake, постоянное TCP без HTTP-паттерна после него.
+- **Анализ размеров пакетов** — ServerHello ~200 байт в одном сегменте; тотальная фрагментация всех пакетов даёт аномальный PPS.
+
+---
+
+### 1. Целевые транспортные связки (генерация в шаблонах)
+
+Сейчас шаблон `xray.json.tmpl` — наивный `VLESS + TCP`. Нужны пресеты inbounds:
+
+| Приоритет | Связка | Порт (пример) | Назначение |
+|-----------|--------|---------------|------------|
+| **Основная** | `VLESS + Reality + XHTTP` (`mode: stream-one`) | 443 | Лучшая маскировка поведения трафика; стандарт 2026 |
+| **Резервная** | `VLESS + Reality + Vision` (TCP) | 8443 | iOS и клиенты без XHTTP; разнообразие для DPI |
+| **Мобильная** | `VLESS + TLS` (нестандартный порт) | настраиваемый | Запасной вариант; в ссылках — hint на `mux` (concurrency 8) |
+| **Альтернатива** | `AmneziaWG` | UDP | Резерв при блокировке Xray-стека; отдельный inbound/профиль |
+
+Задачи:
+- [ ] Расширить `backend/internal/config` — секция `core.stealth` (или `core.xray.inbounds[]`) с пресетами транспортов.
+- [ ] Переписать/дополнить `templates/xray.json.tmpl` — **два основных inbound** одновременно: XHTTP+Reality (443) и TCP+Reality+Vision (8443).
+- [ ] Для XHTTP явно задавать `"mode": "stream-one"` (не `auto` — известные баги).
+- [ ] Параметры Reality в шаблоне: `dest`, `serverNames`, `privateKey`, `shortIds`, `fingerprint` (по умолчанию `firefox` или `edge`, не `chrome`/`safari`).
+- [ ] Аналогичные пресеты для sing-box (`templates/singbox.json.tmpl`) где транспорт поддерживается.
+- [ ] Генерация **нескольких ссылок на пользователя** (по одной на каждый inbound) для подписки и API.
+
+---
+
+### 2. Маскировка Reality (Impersonation)
+
+- [ ] Поля конфига: `reality.dest`, `reality.server_names[]`, опционально `show` / `xver`.
+- [ ] **Валидация и рекомендации в UI/docs:** не использовать популярные цели (`yahoo.com`, `vk.com`) — повышенный контроль.
+- [ ] Рекомендовать малоизвестные легитимные CDN-домены (например, зона `.okcdn.ru`) или собственный сайт-донор.
+- [ ] Документировать выбор `dest` и проверку доступности сайта-донора с сервера (`curl -vI`).
+- [ ] При появлении в upstream Xray расширенных опций impersonation — подключать через конфиг без форка.
+
+---
+
+### 3. Фрагментация ServerHello
+
+- [ ] Поддержать в конфиге фрагментацию **только первого пакета ServerHello**, не всех пакетов (снижение PPS-аномалии).
+- [ ] Параметры в `config.yaml` / UI: включение, размер/стратегия фрагментации (по документации актуальной версии Xray).
+- [ ] Значения по умолчанию — консервативные; предупреждение в UI при агрессивной фрагментации.
+
+---
+
+### 4. Multi-hop (цепочка узлов)
+
+Модель `Node` уже есть — использовать для схемы «клиент → узел в РФ → узел за рубежом → интернет».
+
+- [ ] Расширить модель `Node`: `role` (`entry` / `exit`), `protocol`, `credentials`, `region`, `priority`.
+- [ ] Генерация outbound `freedom` / `vless` / `chain` в xray-конфиге entry-узла на exit-узел.
+- [ ] API CRUD для узлов + привязка пользователей к цепочке (опционально).
+- [ ] В подписке и `/api/client/config` — отдавать entry-точку как основную, exit — прозрачно на сервере.
+- [ ] UI: схема топологии, health-check узлов, переключение active/inactive.
+
+---
+
+### 5. Генерация ссылок и подписок под anti-DPI
+
+Текущие ссылки в `core/links.go` — `VLESS/TCP/security=none`. Нужно:
+
+- [ ] `buildVLESSRealityXHTTPLink()` — параметры: `type=xhttp`, `security=reality`, `pbk`, `sid`, `fp`, `path`, `mode=stream-one`.
+- [ ] `buildVLESSRealityVisionLink()` — `flow=xtls-rprx-vision`, `security=reality`.
+- [ ] `buildVLESSTLSLink()` — нестандартный порт, `security=tls`, SNI, ALPN; комментарий/hint для mux в JSON-конфиге.
+- [ ] Подписка `/api/subscription/{token}` — **несколько строк** (все доступные профили пользователя) для fallback на стороне клиента.
+- [ ] `GET /api/client/config` — массив `profiles[]` с `priority`, `transport`, `tags` (`xhttp-primary`, `vision-ios-fallback`).
+- [ ] Дефолтный `fingerprint` в ссылках: `firefox` или `edge` (настраиваемо в `config.yaml`).
+
+---
+
+### 6. AmneziaWG (опциональный резервный протокол)
+
+- [ ] Исследовать интеграцию: отдельный Docker-сервис / sidecar или внешний узел, управляемый из панели.
+- [ ] Модель `WireGuardPeer` или расширение `User` — ключи AmneziaWG, параметры обфускации (Jc, Jmin, Jmax, S1, S2, H).
+- [ ] API: выдача конфига/QR для AmneziaWG-профиля в подписке (отдельная строка или URI-схема).
+- [ ] Документация: когда использовать AWG vs Xray-пресеты.
+
+---
+
+### 7. Версионирование и обновление ядра
+
+- [ ] Пиновать версию Xray-core в Docker (`ARG XRAY_VERSION`) с регулярным обновлением.
+- [ ] CI: smoke-тест генерации конфига на новой версии Xray (валидный JSON, `xray run -test`).
+- [ ] Changelog/checklist при обновлении ядра: проверить breaking changes в XHTTP/Reality.
+- [ ] Watch upstream: issues по Reality fingerprint, XHTTP, DPI — без форка до появления официального решения.
+
+---
+
+### 8. Развёртывание и документация
+
+- [ ] Пример `config.yaml` с полным stealth-пресетом (два inbound, Reality, fingerprint).
+- [ ] Скрипт или раздел в README: генерация Reality keypair (`xray x25519`), выбор `dest`.
+- [ ] Docker Compose: порты 443 и 8443, `cap_net_bind_service` при необходимости.
+- [ ] `docs/stealth.md` — объяснение угроз, выбор связки, почему не форк, чеклист перед production.
+- [ ] Ansible/terraform примеры (опционально) для entry-узла в РФ + exit за рубежом.
+
+---
+
+### 9. UI (панель управления)
+
+- [ ] Страница «Транспорты / Stealth»: включение пресетов, порты, Reality dest, fingerprint по умолчанию.
+- [ ] Просмотр сгенерированных ссылок по профилям (XHTTP, Vision, TLS, AWG).
+- [ ] Предупреждения при небезопасных настройках (популярный dest, `chrome` fingerprint, только TCP без XHTTP).
+- [ ] Тест «проверить доступность dest» с backend-запроса.
+
+---
+
+### 10. Тестирование (сервер)
+
+- [ ] Unit-тесты генерации конфига: два inbound, обязательные поля Reality/XHTTP.
+- [ ] Unit-тесты ссылок: корректные query-параметры для каждого пресета.
+- [ ] Integration: `xray run -test -c` на сгенерированном конфиге в CI.
+- [ ] Документировать ручной чеклист: подключение с тестового клиента через каждый inbound (вне CI, на staging).
+
+---
+
+### Порядок реализации (рекомендуемый)
+
+1. Расширить `config.yaml` и структуры конфига (`core.stealth`, Reality, XHTTP).
+2. Два inbound в `xray.json.tmpl` (XHTTP+Reality + Vision+Reality).
+3. Генерация мульти-профильных ссылок и подписки.
+4. UI для stealth-настроек и просмотра профилей.
+5. Multi-hop через модель `Node`.
+6. Фрагментация ServerHello (когда поддерживается целевой версией Xray).
+7. AmneziaWG как опциональный модуль.
+8. Документация и CI smoke-тесты на обновления ядра.
