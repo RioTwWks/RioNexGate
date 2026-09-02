@@ -50,6 +50,24 @@ core:
       sni: "proxy.example.com"
       alpn: ["h2", "http/1.1"]
       tag: vless-tls
+    awg:
+      enabled: false
+      port: 51820
+      subnet: "10.8.0.0/24"
+      server_address: "10.8.0.1/24"
+      config_path: "./data/awg/awg0.conf"
+      private_key: "REPLACE_WITH_AWG_SERVER_PRIVATE_KEY"
+      public_key: "REPLACE_WITH_AWG_SERVER_PUBLIC_KEY"
+      jc: 4
+      jmin: 40
+      jmax: 70
+      s1: 84
+      s2: 0
+      h1: 1286472620
+      h2: 2995958389
+      h3: 641212874
+      h4: 3523276991
+      tag: awg-reserve
 
 telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"

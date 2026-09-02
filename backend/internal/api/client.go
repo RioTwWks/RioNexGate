@@ -272,13 +272,15 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entry, _ := h.db.ResolveUserEntryNode(user)
-
+	var peer *models.WireGuardPeer
+	if h.cfg.Core.Stealth.AWGActive() { peer, _ = h.db.EnsureWireGuardPeer(user.ID, h.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
 	payload := core.BuildSubscriptionBase64Graceful(
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
 		*user,
 		&h.cfg.Core.Stealth,
 		entry,
+		peer,
 	)
 
 	if _, err := base64.StdEncoding.DecodeString(payload); err != nil {

@@ -139,3 +139,18 @@ When the client config endpoint exists, each user profile should appear as:
 3. Rebuild: `docker compose --profile cores build xray-core`.
 4. Run `xray run -test -c ./data/xray/config.json`.
 5. Smoke-test all three profiles from a client.
+
+## AmneziaWG (UDP reserve)
+
+Optional fallback when the Xray stack is blocked. See `core.stealth.awg` in config.example.yaml.
+
+| Scenario | Use |
+|----------|-----|
+| Default anti-DPI | XHTTP + Reality |
+| Xray blocked | AmneziaWG UDP reserve |
+
+Subscription adds `awg://` URI line; profiles API returns raw INI in `config` field.
+
+```bash
+docker compose --profile awg up -d amneziawg
+```
