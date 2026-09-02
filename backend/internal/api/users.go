@@ -126,6 +126,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
+	h.notifyUserDevicesRefresh(user.ID)
 	if err := h.core.Reload(); err != nil {
 		writeError(w, http.StatusInternalServerError, "updated but reload failed: "+err.Error())
 		return

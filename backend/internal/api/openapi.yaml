@@ -165,7 +165,109 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/ClientLink"
                   - $ref: "#/components/schemas/ClientLinkProfiles"
-  # Planned RioNexTunnel GET /api/client/config — profiles[] with priority, transport, tags, config_hash.
+  /subscription/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Base64-encoded subscription link list
+      security: []
+      tags: [RioNexTunnel]
+      responses:
+        "200":
+          description: Standard base64 subscription
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /client/register:
+    post:
+      summary: Register a RioNexTunnel device
+      security: []
+      tags: [RioNexTunnel]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceRequest"
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterDeviceResponse"
+  /client/config:
+    get:
+      summary: JSON client config with config_hash
+      tags: [RioNexTunnel]
+      security:
+        - DeviceTokenAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DeviceToken"
+      responses:
+        "200":
+          description: Client configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientConfig"
+        "401":
+          $ref: "#/components/responses/DeviceUnauthorized"
+  /client/stats:
+    post:
+      summary: Report client telemetry
+      tags: [RioNexTunnel]
+      security:
+        - DeviceTokenAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DeviceToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientStatsRequest"
+      responses:
+        "200":
+          description: Stats accepted
+  /client/commands:
+    get:
+      summary: Long-poll for remote commands
+      tags: [RioNexTunnel]
+      security:
+        - DeviceTokenAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DeviceToken"
+        - name: timeout
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Pending commands
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientCommandsResponse"
+  /stats/client:
+    get:
+      summary: RioNexTunnel client metrics
+      tags: [Stats]
+      responses:
+        "200":
+          description: Active devices and sync counters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMetrics"
   /users/{id}/qr:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -251,6 +353,10 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
+    DeviceTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Device-Token
   parameters:
     UserID:
       name: id
@@ -259,6 +365,12 @@ components:
       schema:
         type: integer
         format: int64
+    DeviceToken:
+      name: X-Device-Token
+      in: header
+      required: true
+      schema:
+        type: string
   schemas:
     User:
       type: object
@@ -331,6 +443,81 @@ components:
           type: string
         protocol:
           type: string
+    RegisterDeviceRequest:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        email:
+          type: string
+        label:
+          type: string
+    RegisterDeviceResponse:
+      type: object
+      properties:
+        device_token:
+          type: string
+        subscription_url:
+          type: string
+    ClientConfig:
+      type: object
+      properties:
+        config_hash:
+          type: string
+        servers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientServer"
+        inbounds:
+          type: object
+        dns:
+          type: object
+    ClientServer:
+      type: object
+      properties:
+        protocol:
+          type: string
+        link:
+          type: string
+        id:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+    ClientStatsRequest:
+      type: object
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+        bytes_in:
+          type: integer
+        bytes_out:
+          type: integer
+        sessions:
+          type: integer
+        status:
+          type: string
+    ClientCommandsResponse:
+      type: object
+      properties:
+        commands:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+    ClientMetrics:
+      type: object
+      properties:
+        active_devices:
+          type: integer
+        sync_requests:
+          type: integer
+        registration_fails:
+          type: integer
     LinkProfile:
       type: object
       properties:
@@ -368,6 +555,12 @@ components:
   responses:
     Unauthorized:
       description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    DeviceUnauthorized:
+      description: Missing or invalid X-Device-Token
       content:
         application/json:
           schema:

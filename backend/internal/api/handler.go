@@ -7,11 +7,18 @@ import (
 )
 
 type Handler struct {
-	db   *db.DB
-	core core.Manager
-	cfg  *config.Config
+	db       *db.DB
+	core     core.Manager
+	cfg      *config.Config
+	commands *CommandManager
+	metrics  ClientMetrics
 }
 
 func NewHandler(database *db.DB, coreMgr core.Manager, cfg *config.Config) *Handler {
-	return &Handler{db: database, core: coreMgr, cfg: cfg}
+	return &Handler{
+		db:       database,
+		core:     coreMgr,
+		cfg:      cfg,
+		commands: NewCommandManager(),
+	}
 }
