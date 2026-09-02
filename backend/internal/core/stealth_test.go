@@ -60,7 +60,7 @@ func TestGenerateStealthXrayConfig(t *testing.T) {
 		{UUID: "uuid-1", Email: "a@example.com"},
 	}
 	stealth := testStealthConfig()
-	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, stealth)
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, stealth, MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestXrayConfigValidate(t *testing.T) {
 	}
 
 	users := []models.User{{UUID: "550e8400-e29b-41d4-a716-446655440000", Email: "test@example.com"}}
-	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, testStealthConfig())
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, testStealthConfig(), MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}
