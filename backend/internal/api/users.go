@@ -160,6 +160,24 @@ func (h *Handler) GetUserLink(w http.ResponseWriter, r *http.Request) {
 	if proto == "" {
 		proto = "vless"
 	}
+	all := r.URL.Query().Get("all") == "true" || r.URL.Query().Get("profile") == "all"
+	if all {
+		profiles, err := h.core.GetClientLinkProfiles(strconv.FormatUint(uint64(user.ID), 10))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		link := ""
+		if len(profiles) > 0 {
+			link = profiles[0].Link
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"link":     link,
+			"protocol": proto,
+			"links":    profiles,
+		})
+		return
+	}
 	link, err := h.core.GetClientLink(strconv.FormatUint(uint64(user.ID), 10), proto)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

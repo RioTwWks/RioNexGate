@@ -24,6 +24,21 @@ jobs:
         working-directory: backend
         run: CGO_ENABLED=1 go test ./...
 
+      - name: Install Xray-core
+        run: |
+          XRAY_VERSION=26.3.27
+          curl -fsSL -o /tmp/xray.zip "https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/Xray-linux-64.zip"
+          sudo apt-get install -y unzip
+          unzip -q /tmp/xray.zip -d /tmp/xray
+          sudo mv /tmp/xray/xray /usr/local/bin/xray
+          xray version
+
+      - name: Validate generated Xray config
+        working-directory: backend
+        env:
+          CI: "true"
+        run: CGO_ENABLED=1 go test ./internal/core -run TestXrayConfigValidate -count=1
+
   frontend:
     runs-on: ubuntu-latest
     steps:

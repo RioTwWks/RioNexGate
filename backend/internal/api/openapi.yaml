@@ -142,21 +142,30 @@ paths:
           enum: [vless, vmess, trojan]
           default: vless
         description: Client protocol for the connection link
+      - name: all
+        in: query
+        schema:
+          type: boolean
+          default: false
+        description: When true, return all stealth profiles in links[]
+      - name: profile
+        in: query
+        schema:
+          type: string
+        description: Set to "all" (alias for all=true) to return multi-profile links
     get:
       summary: Get client connection link
       tags: [Users]
       responses:
         "200":
-          description: Connection URI
+          description: Connection URI (single link, or multiple stealth profiles when all=true)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  link:
-                    type: string
-                  protocol:
-                    type: string
+                oneOf:
+                  - $ref: "#/components/schemas/ClientLink"
+                  - $ref: "#/components/schemas/ClientLinkProfiles"
+  # Planned RioNexTunnel GET /api/client/config — profiles[] with priority, transport, tags, config_hash.
   /users/{id}/qr:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -315,6 +324,42 @@ components:
                 type: integer
               bytes_down:
                 type: integer
+    ClientLink:
+      type: object
+      properties:
+        link:
+          type: string
+        protocol:
+          type: string
+    LinkProfile:
+      type: object
+      properties:
+        profile:
+          type: string
+          example: xhttp-primary
+        transport:
+          type: string
+          example: xhttp
+        priority:
+          type: integer
+        port:
+          type: integer
+        tags:
+          type: string
+        link:
+          type: string
+    ClientLinkProfiles:
+      type: object
+      properties:
+        link:
+          type: string
+          description: Primary profile link (XHTTP when stealth enabled)
+        protocol:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkProfile"
     Error:
       type: object
       properties:
