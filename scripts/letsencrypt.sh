@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Example: obtain Let's Encrypt certificates for proxy-mgr panel (nginx).
+# Example: obtain Let's Encrypt certificates for rionexgate panel (nginx).
 #
 # Prerequisites:
 #   - Domain DNS points to this host

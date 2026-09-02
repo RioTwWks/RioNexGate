@@ -1,4 +1,4 @@
-module proxy-mgr
+module rionexgate
 
 go 1.21
 

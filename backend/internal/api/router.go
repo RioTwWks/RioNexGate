@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
-	"proxy-mgr/internal/api/middleware"
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/core"
-	"proxy-mgr/internal/db"
+	"rionexgate/internal/api/middleware"
+	"rionexgate/internal/config"
+	"rionexgate/internal/core"
+	"rionexgate/internal/db"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"

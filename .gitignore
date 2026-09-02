@@ -9,8 +9,8 @@
 *.dylib
 *.test
 *.out
-/proxy-mgr
-/backend/proxy-mgr
+/rionexgate
+/backend/rionexgate
 
 # Файлы отладки и покрытия
 *.prof

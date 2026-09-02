@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"testing"
 
-	"proxy-mgr/internal/api"
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/core"
-	"proxy-mgr/internal/db"
+	"rionexgate/internal/api"
+	"rionexgate/internal/config"
+	"rionexgate/internal/core"
+	"rionexgate/internal/db"
 )
 
 func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {

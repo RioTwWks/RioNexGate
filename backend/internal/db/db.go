@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/models"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"

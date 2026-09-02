@@ -1,9 +1,9 @@
 ---
-description: Контекст проекта proxy-mgr — структура, стек, команды, деплой
+description: Контекст проекта RioNexGate — структура, стек, команды, деплой
 alwaysApply: true
 ---
 
-# proxy-mgr
+# RioNexGate
 
 Панель управления прокси на **Xray-core** / **sing-box**: Go backend, React frontend, Nginx, Docker Compose.
 

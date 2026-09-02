@@ -1,4 +1,4 @@
-# Запускать из корня репозитория: cd ~/proxy-mgr && make dev
+# Запускать из корня репозитория: cd ~/RioNexGate && make dev
 ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 DOCKER_COMPOSE := $(ROOT)scripts/docker-compose.sh
 
@@ -46,7 +46,7 @@ test-e2e:
 	cd e2e && npm ci && npx playwright install chromium && npm test
 
 migrate: docker-check
-	$(DOCKER_COMPOSE) exec backend ./proxy-mgr migrate
+	$(DOCKER_COMPOSE) exec backend ./rionexgate migrate
 
 logs: docker-check
 	$(DOCKER_COMPOSE) logs -f

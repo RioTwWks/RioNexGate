@@ -3,7 +3,7 @@ server:
   api_key: "e2e-test-key"
 
 database:
-  path: "../e2e/data/proxy-mgr.db"
+  path: "../e2e/data/rionexgate.db"
 
 core:
   type: "xray"

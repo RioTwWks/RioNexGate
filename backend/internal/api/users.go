@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"proxy-mgr/internal/db"
-	"proxy-mgr/internal/models"
+	"rionexgate/internal/db"
+	"rionexgate/internal/models"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"proxy-mgr/internal/config"
-	"proxy-mgr/internal/core"
-	"proxy-mgr/internal/db"
+	"rionexgate/internal/config"
+	"rionexgate/internal/core"
+	"rionexgate/internal/db"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )

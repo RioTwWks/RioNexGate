@@ -28,7 +28,7 @@ export function Login() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-lg p-6 space-y-4"
       >
-        <h1 className="text-xl font-semibold text-center text-sky-400">proxy-mgr</h1>
+        <h1 className="text-xl font-semibold text-center text-sky-400">RioNexGate</h1>
         <p className="text-sm text-slate-400 text-center">Enter your API key to continue</p>
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
         <input

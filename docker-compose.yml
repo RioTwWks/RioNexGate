@@ -1,6 +1,6 @@
 services:
   backend:
-    image: proxy-mgr-backend:latest
+    image: rionexgate-backend:latest
     build:
       context: .
       dockerfile: Dockerfile.backend
@@ -23,7 +23,7 @@ services:
       start_period: 10s
 
   frontend:
-    image: proxy-mgr-frontend:latest
+    image: rionexgate-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -40,7 +40,7 @@ services:
       retries: 3
 
   nginx:
-    image: proxy-mgr-nginx:latest
+    image: rionexgate-nginx:latest
     build:
       context: .
       dockerfile: Dockerfile.nginx
