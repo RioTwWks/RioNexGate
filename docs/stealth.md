@@ -127,7 +127,6 @@ When the client config endpoint exists, each user profile should appear as:
 - ServerHello fragmentation on REALITY inbounds (upstream crash)
 - Multi-hop node chains (`Node` entry/exit)
 - AmneziaWG sidecar
-- Panel UI for stealth settings (section 9 of tasks)
 
 ## Threat model (server side)
 

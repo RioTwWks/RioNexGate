@@ -24,6 +24,9 @@ const DEFAULT_SETTINGS: StealthSettings = {
   fragmentation: {
     enabled: false,
     strategy: 'serverhello',
+    length: '50-100',
+    delay: '10-20',
+    max_split: '2-4',
   },
 };
 
@@ -243,21 +246,73 @@ export function Stealth() {
           <span className="text-sm">Enable ServerHello fragmentation</span>
         </label>
         {settings.fragmentation.enabled && (
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Strategy</label>
-            <select
-              value={settings.fragmentation.strategy || 'serverhello'}
-              onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  fragmentation: { ...prev.fragmentation, strategy: e.target.value },
-                }))
-              }
-              className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm"
-            >
-              <option value="serverhello">ServerHello only (recommended)</option>
-              <option value="all">All packets (aggressive)</option>
-            </select>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Strategy</label>
+              <select
+                value={settings.fragmentation.strategy || 'serverhello'}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    fragmentation: { ...prev.fragmentation, strategy: e.target.value },
+                  }))
+                }
+                className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm"
+              >
+                <option value="serverhello">ServerHello only (recommended)</option>
+                <option value="all">All packets (aggressive)</option>
+              </select>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Length (bytes)</label>
+                <input
+                  type="text"
+                  value={settings.fragmentation.length || '50-100'}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      fragmentation: { ...prev.fragmentation, length: e.target.value },
+                    }))
+                  }
+                  placeholder="50-100"
+                  className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Delay (ms)</label>
+                <input
+                  type="text"
+                  value={settings.fragmentation.delay || '10-20'}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      fragmentation: { ...prev.fragmentation, delay: e.target.value },
+                    }))
+                  }
+                  placeholder="10-20"
+                  className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Max split</label>
+                <input
+                  type="text"
+                  value={settings.fragmentation.max_split || '2-4'}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      fragmentation: { ...prev.fragmentation, max_split: e.target.value },
+                    }))
+                  }
+                  placeholder="2-4"
+                  className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">
+              Applied only on VLESS+TLS inbound. REALITY presets ignore fragmentation until upstream fix.
+            </p>
           </div>
         )}
       </section>
