@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"rionexgate/internal/config"
 	"rionexgate/internal/models"
 )
 
@@ -44,10 +45,10 @@ type ClientConfig struct {
 	DNS        ClientDNS      `json:"dns"`
 }
 
-func BuildClientConfig(host string, port int, user models.User, socksPort int) (*ClientConfig, error) {
+func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig) (*ClientConfig, error) {
 	servers := make([]ClientServer, 0, len(SupportedProtocols))
 	for _, proto := range SupportedProtocols {
-		link := GetClientLink(host, port, user, proto)
+		link := GetClientLink(host, port, user, proto, stealth)
 		srv := ClientServer{
 			Protocol: proto,
 			Link:     link,

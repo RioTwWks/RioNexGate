@@ -8,7 +8,7 @@ database:
 core:
   type: "xray"   # or "sing-box"
   listen_port: 443
-  public_host: "127.0.0.1"            # хост в VLESS-ссылках (домен или IP)
+  public_host: "proxy.example.com"    # хост в VLESS-ссылках (домен или IP)
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
@@ -18,6 +18,38 @@ core:
     config_path: "./data/sing-box/config.json"
     binary_path: "/usr/local/bin/sing-box"
     api_address: "127.0.0.1:9090"
+
+  # Anti-DPI stealth presets (Reality + XHTTP / Vision / optional TLS).
+  # Generate keypair: xray x25519  (see README and docs/stealth.md)
+  stealth:
+    enabled: true
+    fingerprint: firefox            # firefox or edge recommended (not chrome/safari)
+    reality:
+      dest: "www.example-cdn.com:443"
+      server_names:
+        - "www.example-cdn.com"
+      private_key: "REPLACE_WITH_PRIVATE_KEY"
+      public_key: "REPLACE_WITH_PUBLIC_KEY"
+      short_ids:
+        - "a1b2c3d4"
+      show: false
+      xver: 0
+    xhttp:
+      enabled: true
+      port: 443
+      path: "/api/v1/data"
+      mode: stream-one              # do not use auto — known client bugs
+      tag: vless-xhttp-reality
+    vision:
+      enabled: true
+      port: 8443
+      tag: vless-vision-reality
+    tls:
+      enabled: false
+      port: 2053
+      sni: "proxy.example.com"
+      alpn: ["h2", "http/1.1"]
+      tag: vless-tls
 
 telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"

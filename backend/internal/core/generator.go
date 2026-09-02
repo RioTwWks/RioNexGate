@@ -3,8 +3,10 @@ package core
 import (
 	"bytes"
 	"embed"
+	"strings"
 	"text/template"
 
+	"rionexgate/internal/config"
 	"rionexgate/internal/models"
 )
 
@@ -15,6 +17,7 @@ type templateData struct {
 	ListenPort int
 	APIAddress string
 	Users      []models.User
+	Stealth    *config.StealthConfig
 }
 
 func renderTemplate(name string, data templateData) ([]byte, error) {
@@ -22,7 +25,12 @@ func renderTemplate(name string, data templateData) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	tmpl, err := template.New(name).Parse(string(content))
+	funcMap := template.FuncMap{
+		"jsonStrings":   jsonStringList,
+		"stealthSNI":    stealthPrimarySNI,
+		"stealthActive": stealthIsActive,
+	}
+	tmpl, err := template.New(name).Funcs(funcMap).Parse(string(content))
 	if err != nil {
 		return nil, err
 	}
@@ -33,18 +41,39 @@ func renderTemplate(name string, data templateData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func generateXrayConfig(listenPort int, apiAddress string, users []models.User) ([]byte, error) {
+func stealthIsActive(s *config.StealthConfig) bool {
+	return s != nil && s.IsActive()
+}
+
+func stealthPrimarySNI(s *config.StealthConfig) string {
+	if s == nil {
+		return ""
+	}
+	return s.PrimarySNI()
+}
+
+func jsonStringList(items []string) string {
+	quoted := make([]string, len(items))
+	for i, item := range items {
+		quoted[i] = `"` + item + `"`
+	}
+	return strings.Join(quoted, ", ")
+}
+
+func generateXrayConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig) ([]byte, error) {
 	return renderTemplate("xray.json.tmpl", templateData{
 		ListenPort: listenPort,
 		APIAddress: apiAddress,
 		Users:      users,
+		Stealth:    stealth,
 	})
 }
 
-func generateSingboxConfig(listenPort int, apiAddress string, users []models.User) ([]byte, error) {
+func generateSingboxConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig) ([]byte, error) {
 	return renderTemplate("singbox.json.tmpl", templateData{
 		ListenPort: listenPort,
 		APIAddress: apiAddress,
 		Users:      users,
+		Stealth:    stealth,
 	})
 }

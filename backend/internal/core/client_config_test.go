@@ -12,7 +12,7 @@ func TestBuildSubscriptionBase64(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	links := BuildSubscriptionLinks("example.com", 443, user)
+	links := BuildSubscriptionLinks("example.com", 443, user, nil)
 	if !strings.Contains(strings.Join(links, "\n"), "vless://") {
 		t.Fatalf("expected vless link in subscription")
 	}
@@ -23,7 +23,7 @@ func TestBuildClientConfigHash(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	cfg, err := BuildClientConfig("example.com", 443, user, 10808)
+	cfg, err := BuildClientConfig("example.com", 443, user, 10808, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

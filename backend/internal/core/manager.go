@@ -21,6 +21,7 @@ type Manager interface {
 	Reload() error
 	GetStats(userID string) (float64, error)
 	GetClientLink(userID string, protocol string) (string, error)
+	GetClientLinkProfiles(userID string) ([]LinkProfile, error)
 	Type() string
 	SetType(t string) error
 	StartStatsCollector(ctx context.Context)
@@ -67,10 +68,11 @@ func (m *manager) Reload() error {
 
 	var data []byte
 	listenPort := m.cfg.Core.ListenPort
+	stealth := &m.cfg.Core.Stealth
 	if m.Type() == "sing-box" {
-		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users)
+		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users, stealth)
 	} else {
-		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users)
+		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users, stealth)
 	}
 	if err != nil {
 		return err
@@ -114,8 +116,23 @@ func (m *manager) GetClientLink(userID string, protocol string) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	link := GetClientLink(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, *user, protocol)
+	link := GetClientLink(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, *user, protocol, &m.cfg.Core.Stealth)
 	return link, nil
+}
+
+func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
+	var user *models.User
+	var err error
+	var id uint
+	if _, scanErr := fmt.Sscanf(userID, "%d", &id); scanErr == nil {
+		user, err = m.db.GetUser(id)
+	} else {
+		user, err = m.db.GetUserByUUID(userID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return GetClientLinkProfiles(m.cfg.Core.PublicHost, m.cfg.Core.ListenPort, *user, &m.cfg.Core.Stealth), nil
 }
 
 func (m *manager) StartStatsCollector(ctx context.Context) {

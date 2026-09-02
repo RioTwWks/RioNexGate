@@ -3,6 +3,93 @@
     "level": "warn"
   },
   "inbounds": [
+{{- if stealthActive .Stealth}}
+{{- if .Stealth.XHTTP.Enabled}}
+    {
+      "type": "vless",
+      "tag": "{{.Stealth.XHTTP.Tag}}",
+      "listen": "::",
+      "listen_port": {{.Stealth.XHTTP.Port}},
+      "users": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+        {
+          "uuid": "{{$u.UUID}}",
+          "name": "{{$u.Email}}"
+        }
+{{- end}}
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "{{stealthSNI .Stealth}}",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "{{stealthSNI .Stealth}}",
+            "server_port": 443
+          },
+          "private_key": "{{.Stealth.Reality.PrivateKey}}",
+          "short_id": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
+        }
+      },
+      "transport": {
+        "type": "xhttp",
+        "path": "{{.Stealth.XHTTP.Path}}",
+        "mode": "{{.Stealth.XHTTP.Mode}}"
+      }
+    }{{if or .Stealth.Vision.Enabled .Stealth.TLS.Enabled}},{{end}}
+{{- end}}
+{{- if .Stealth.Vision.Enabled}}
+    {
+      "type": "vless",
+      "tag": "{{.Stealth.Vision.Tag}}",
+      "listen": "::",
+      "listen_port": {{.Stealth.Vision.Port}},
+      "users": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+        {
+          "uuid": "{{$u.UUID}}",
+          "name": "{{$u.Email}}",
+          "flow": "xtls-rprx-vision"
+        }
+{{- end}}
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "{{stealthSNI .Stealth}}",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "{{stealthSNI .Stealth}}",
+            "server_port": 443
+          },
+          "private_key": "{{.Stealth.Reality.PrivateKey}}",
+          "short_id": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
+        }
+      }
+    }{{if .Stealth.TLS.Enabled}},{{end}}
+{{- end}}
+{{- if .Stealth.TLS.Enabled}}
+    {
+      "type": "vless",
+      "tag": "{{.Stealth.TLS.Tag}}",
+      "listen": "::",
+      "listen_port": {{.Stealth.TLS.Port}},
+      "users": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+        {
+          "uuid": "{{$u.UUID}}",
+          "name": "{{$u.Email}}"
+        }
+{{- end}}
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "{{.Stealth.TLS.SNI}}",
+        "alpn": [{{jsonStrings .Stealth.TLS.ALPN}}]
+      }
+    }
+{{- end}}
+{{- else}}
     {
       "type": "vless",
       "tag": "vless-in",
@@ -20,6 +107,7 @@
         "enabled": false
       }
     }
+{{- end}}
   ],
   "outbounds": [
     {

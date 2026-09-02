@@ -14,7 +14,7 @@ func TestBuildVLESSLink(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	link := GetClientLink("example.com", 443, user, "vless")
+	link := GetClientLink("example.com", 443, user, "vless", nil)
 	if !strings.HasPrefix(link, "vless://") {
 		t.Fatalf("expected vless prefix, got %s", link)
 	}
@@ -31,7 +31,7 @@ func TestBuildVMessLink(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	link := GetClientLink("example.com", 443, user, "vmess")
+	link := GetClientLink("example.com", 443, user, "vmess", nil)
 	if !strings.HasPrefix(link, "vmess://") {
 		t.Fatalf("expected vmess prefix, got %s", link)
 	}
@@ -53,7 +53,7 @@ func TestBuildTrojanLink(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	link := GetClientLink("example.com", 443, user, "trojan")
+	link := GetClientLink("example.com", 443, user, "trojan", nil)
 	if !strings.HasPrefix(link, "trojan://") {
 		t.Fatalf("expected trojan prefix, got %s", link)
 	}
@@ -67,7 +67,7 @@ func TestGenerateXrayConfig(t *testing.T) {
 		{UUID: "uuid-1", Email: "a@example.com"},
 		{UUID: "uuid-2", Email: "b@example.com"},
 	}
-	data, err := generateXrayConfig(443, "127.0.0.1:10085", users)
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestGenerateSingboxConfig(t *testing.T) {
 	users := []models.User{
 		{UUID: "uuid-1", Email: "a@example.com"},
 	}
-	data, err := generateSingboxConfig(443, "127.0.0.1:9090", users)
+	data, err := generateSingboxConfig(443, "127.0.0.1:9090", users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

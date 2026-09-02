@@ -158,6 +158,7 @@ func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, erro
 		h.cfg.Core.ListenPort,
 		*user,
 		h.cfg.Server.ClientSOCKS5Port,
+		&h.cfg.Core.Stealth,
 	)
 }
 
@@ -232,6 +233,7 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		h.cfg.Core.PublicHost,
 		h.cfg.Core.ListenPort,
 		*user,
+		&h.cfg.Core.Stealth,
 	)
 
 	if _, err := base64.StdEncoding.DecodeString(payload); err != nil {
