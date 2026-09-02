@@ -123,7 +123,15 @@
         "tlsSettings": {
           "serverName": "{{.Stealth.TLS.SNI}}",
           "alpn": [{{jsonStrings .Stealth.TLS.ALPN}}]
-        }
+        }{{if stealthFragmentationTLS .Stealth}},
+        "finalmask": {
+          "tcp": [{"type": "fragment", "settings": {
+            "packets": "{{stealthFragmentPackets .Stealth}}",
+            "length": "{{stealthFragmentLength .Stealth}}",
+            "delay": "{{stealthFragmentDelay .Stealth}}",
+            "maxSplit": "{{stealthFragmentMaxSplit .Stealth}}"
+          }}]
+        }{{end}}
       },
       "sniffing": {
         "enabled": true,

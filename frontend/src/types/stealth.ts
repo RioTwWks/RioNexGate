@@ -14,6 +14,12 @@ export interface RealitySettings {
 export interface FragmentationSettings {
   enabled: boolean;
   strategy?: string;
+  length?: string;
+  delay?: string;
+  max_split?: string;
+  applicable?: boolean;
+  limitation?: string;
+  aggressive?: boolean;
 }
 
 export interface StealthSettings {

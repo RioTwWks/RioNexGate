@@ -50,6 +50,12 @@ core:
       sni: "proxy.example.com"
       alpn: ["h2", "http/1.1"]
       tag: vless-tls
+    fragmentation:
+      enabled: false
+      strategy: serverhello
+      length: "50-100"
+      delay: "10-20"
+      max_split: "2-4"
 
 telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"
