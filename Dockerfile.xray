@@ -1,0 +1,5 @@
+ARG XRAY_VERSION=26.3.27
+FROM teddysun/xray:${XRAY_VERSION}
+
+# Official Xray-core image; version pinned via build arg.
+# Update XRAY_VERSION in docker-compose.yml / .env when upgrading.

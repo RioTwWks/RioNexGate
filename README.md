@@ -109,6 +109,43 @@ make dev-cores
 
 В модальном окне ссылки можно выбрать протокол: **VLESS**, **VMess** или **Trojan**.
 
+## Stealth / Anti-DPI (Reality + XHTTP)
+
+Секция `core.stealth` в `backend/config.yaml` включает пресеты для устойчивости к DPI:
+
+- **VLESS + Reality + XHTTP** (`mode: stream-one`) на порту **443**
+- **VLESS + Reality + Vision** (TCP) на порту **8443**
+- Опционально **VLESS + TLS** на нестандартном порту
+
+Подробности: [`docs/stealth.md`](docs/stealth.md).
+
+### Генерация Reality keypair
+
+```bash
+# В контейнере xray или с установленным xray:
+xray x25519
+# PrivateKey → core.stealth.reality.private_key
+# Password   → core.stealth.reality.public_key (pbk в клиентских ссылках)
+```
+
+Проверка `dest` с сервера:
+
+```bash
+curl -vI --connect-timeout 5 "https://your-cdn-host.example"
+```
+
+Мульти-профильные ссылки через API:
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
+```
+
+Запуск ядра с stealth inbound (порты 443/8443 на хосте):
+
+```bash
+make dev-cores
+```
+
 ## OpenAPI / Swagger
 
 После запуска панели откройте http://localhost:8888/api/docs — интерактивная документация API.  

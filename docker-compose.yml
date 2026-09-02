@@ -64,13 +64,20 @@ services:
 
   xray-core:
     profiles: ["cores"]
-    image: teddysun/xray:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.xray
+      args:
+        XRAY_VERSION: ${XRAY_VERSION:-26.3.27}
+    image: rionexgate-xray:${XRAY_VERSION:-26.3.27}
     pull_policy: if_not_present
     volumes:
       - ./data/xray:/etc/xray
       - ./data/xray/logs:/var/log/xray
     restart: unless-stopped
     network_mode: host
+    # Binds stealth inbounds on host ports 443 (XHTTP+Reality) and 8443 (Vision+Reality).
+    # Requires core.stealth in config.yaml; may need cap_net_bind_service for port 443.
 
   sing-box:
     profiles: ["cores"]

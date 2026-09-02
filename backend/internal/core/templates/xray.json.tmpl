@@ -21,6 +21,117 @@
     }
   },
   "inbounds": [
+{{- if stealthActive .Stealth}}
+{{- if .Stealth.XHTTP.Enabled}}
+    {
+      "tag": "{{.Stealth.XHTTP.Tag}}",
+      "listen": "0.0.0.0",
+      "port": {{.Stealth.XHTTP.Port}},
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+          {
+            "id": "{{$u.UUID}}",
+            "email": "{{$u.Email}}",
+            "level": 0
+          }
+{{- end}}
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "security": "reality",
+        "realitySettings": {
+          "show": {{.Stealth.Reality.Show}},
+          "dest": "{{.Stealth.Reality.Dest}}",
+          "xver": {{.Stealth.Reality.Xver}},
+          "serverNames": [{{jsonStrings .Stealth.Reality.ServerNames}}],
+          "privateKey": "{{.Stealth.Reality.PrivateKey}}",
+          "shortIds": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
+        },
+        "xhttpSettings": {
+          "path": "{{.Stealth.XHTTP.Path}}",
+          "mode": "{{.Stealth.XHTTP.Mode}}"
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }{{if or .Stealth.Vision.Enabled .Stealth.TLS.Enabled}},{{end}}
+{{- end}}
+{{- if .Stealth.Vision.Enabled}}
+    {
+      "tag": "{{.Stealth.Vision.Tag}}",
+      "listen": "0.0.0.0",
+      "port": {{.Stealth.Vision.Port}},
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+          {
+            "id": "{{$u.UUID}}",
+            "email": "{{$u.Email}}",
+            "flow": "xtls-rprx-vision",
+            "level": 0
+          }
+{{- end}}
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": {{.Stealth.Reality.Show}},
+          "dest": "{{.Stealth.Reality.Dest}}",
+          "xver": {{.Stealth.Reality.Xver}},
+          "serverNames": [{{jsonStrings .Stealth.Reality.ServerNames}}],
+          "privateKey": "{{.Stealth.Reality.PrivateKey}}",
+          "shortIds": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }{{if .Stealth.TLS.Enabled}},{{end}}
+{{- end}}
+{{- if .Stealth.TLS.Enabled}}
+    {
+      "tag": "{{.Stealth.TLS.Tag}}",
+      "listen": "0.0.0.0",
+      "port": {{.Stealth.TLS.Port}},
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+{{- range $i, $u := .Users}}{{if $i}},{{end}}
+          {
+            "id": "{{$u.UUID}}",
+            "email": "{{$u.Email}}",
+            "level": 0
+          }
+{{- end}}
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "{{.Stealth.TLS.SNI}}",
+          "alpn": [{{jsonStrings .Stealth.TLS.ALPN}}]
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }
+{{- end}}
+{{- else}}
     {
       "tag": "vless-in",
       "port": {{.ListenPort}},
@@ -41,6 +152,7 @@
         "network": "tcp"
       }
     }
+{{- end}}
   ],
   "outbounds": [
     {
