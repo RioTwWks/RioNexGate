@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
 import { LinkModal } from '../components/LinkModal';
@@ -71,6 +72,12 @@ export function Users() {
                   <td className="p-3">{new Date(u.expires_at).toLocaleDateString()}</td>
                   <td className="p-3">{u.active ? 'Yes' : 'No'}</td>
                   <td className="p-3 text-right space-x-2">
+                    <Link
+                      to={`/users/${u.id}`}
+                      className="text-emerald-400 hover:underline"
+                    >
+                      Details
+                    </Link>
                     <button
                       onClick={() => setLinkUserId(u.id)}
                       className="text-sky-400 hover:underline"

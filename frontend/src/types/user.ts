@@ -7,6 +7,8 @@ export interface User {
   expires_at: string;
   active: boolean;
   created_at: string;
+  subscription_token?: string;
+  subscription_url?: string;
 }
 
 export interface StatsPoint {
