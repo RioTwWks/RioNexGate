@@ -1,6 +1,6 @@
 server:
   port: 8080
-  api_key: "change-me-to-secure-key"   # тот же ключ вводится в веб-панели
+  api_key: "change-me-to-secure-key"   # same key used in the web panel
 
 database:
   path: "./data/rionexgate.db"
@@ -8,7 +8,7 @@ database:
 core:
   type: "xray"   # or "sing-box"
   listen_port: 443
-  public_host: "proxy.example.com"    # хост в VLESS-ссылках (домен или IP)
+  public_host: "proxy.example.com"    # host in VLESS links (domain or IP)
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
@@ -20,7 +20,7 @@ core:
     api_address: "127.0.0.1:9090"
 
   # Anti-DPI stealth presets (Reality + XHTTP / Vision / optional TLS).
-  # Generate keypair: xray x25519  (see README and docs/stealth.md)
+  # Generate keypair: xray x25519  (see README.md / README.ru.md and docs/stealth.md)
   stealth:
     enabled: true
     fingerprint: firefox            # firefox or edge recommended (not chrome/safari)
