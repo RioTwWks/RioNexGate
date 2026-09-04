@@ -12,7 +12,7 @@
 - **Пользователи**: CRUD, лимиты трафика и срока действия, ссылки и QR (VLESS, VMess, Trojan)
 - **Дашборд**: общая статистика трафика и графики
 - **Stealth / anti-DPI**: VLESS + Reality + XHTTP (`stream-one`), Vision (TCP), опциональный TLS, фрагментация ServerHello, резерв AmneziaWG — см. [docs/stealth.ru.md](docs/stealth.ru.md)
-- **Мульти-хоп узлы**: цепочки entry/exit с проверкой здоровья (страница **Nodes**)
+- **Мульти-хоп узлы**: цепочки entry/exit (например, RU → EU) с health-check — см. [docs/multihop.ru.md](docs/multihop.ru.md)
 - **Клиентский API RioNexTunnel**: регистрация устройств, синхронизация JSON-конфига, URL подписки, телеметрия, удалённые команды
 - **Telegram-бот** для администратора
 - **REST API** с аутентификацией по API-ключу; OpenAPI / Swagger UI
@@ -23,6 +23,7 @@
 | Руководство | Описание |
 |-------------|----------|
 | [Stealth / anti-DPI](docs/stealth.ru.md) | Reality, XHTTP, Vision, TLS, фрагментация, AmneziaWG |
+| [Мульти-хоп цепочки](docs/multihop.ru.md) | Топология RU entry → EU exit, API узлов, credentials |
 | [docs/README.md](docs/README.md) | Индекс документации (EN / RU) |
 | [OpenAPI / Swagger](http://localhost:8888/api/docs) | Интерактивная справка API (после `make dev`) |
 
@@ -141,6 +142,20 @@ curl -X POST http://localhost:8888/api/client/register \
 - Опциональный резерв **AmneziaWG** (UDP)
 
 Подробности: [docs/stealth.ru.md](docs/stealth.ru.md) · [docs/stealth.md](docs/stealth.md)
+
+## Мульти-хоп цепочки (RU entry → EU exit)
+
+Направляйте пользователей через entry-сервер (например, Россия) с выходом в другом регионе (например, ЕС). Клиенты подключаются только к entry; панель генерирует Xray outbound'ы на entry-хосте.
+
+Подробности: [docs/multihop.ru.md](docs/multihop.ru.md) · [docs/multihop.md](docs/multihop.md)
+
+```bash
+# Регистрация exit-узла и привязка пользователя (полный JSON credentials — в документации)
+curl -X POST http://localhost:8888/api/nodes -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"exit-eu","address":"eu.example.com","port":8443,"role":"exit","credentials":"{...}"}'
+curl -X PUT http://localhost:8888/api/users/1/chain -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"entry_node_id":1,"exit_node_id":2}'
+```
 
 ### Генерация Reality keypair
 

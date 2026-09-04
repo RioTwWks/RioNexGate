@@ -12,7 +12,7 @@ It supports user management, VLESS/VMess/Trojan links, QR codes, traffic limits,
 - **Users**: CRUD, traffic limits, expiry, connection links and QR codes (VLESS, VMess, Trojan)
 - **Dashboard**: aggregate traffic stats and charts
 - **Stealth / anti-DPI**: VLESS + Reality + XHTTP (`stream-one`), Vision (TCP), optional TLS, ServerHello fragmentation, AmneziaWG reserve — see [docs/stealth.md](docs/stealth.md)
-- **Multi-hop nodes**: entry/exit node chains with health checks (UI **Nodes** page)
+- **Multi-hop nodes**: entry/exit chains (e.g. RU → EU) with health checks — see [docs/multihop.md](docs/multihop.md)
 - **RioNexTunnel client API**: device registration, JSON config sync, subscription URLs, telemetry, remote commands
 - **Telegram bot** for administrators
 - **REST API** with API-key authentication; OpenAPI / Swagger UI
@@ -23,6 +23,7 @@ It supports user management, VLESS/VMess/Trojan links, QR codes, traffic limits,
 | Guide | Description |
 |-------|-------------|
 | [Stealth / anti-DPI](docs/stealth.md) | Reality, XHTTP, Vision, TLS, fragmentation, AmneziaWG |
+| [Multi-hop chains](docs/multihop.md) | RU entry → EU exit topology, nodes API, credentials |
 | [docs/README.md](docs/README.md) | Documentation index (EN / RU) |
 | [OpenAPI / Swagger](http://localhost:8888/api/docs) | Interactive API reference (after `make dev`) |
 
@@ -141,6 +142,20 @@ The `core.stealth` section in `backend/config.yaml` enables DPI-resistant preset
 - Optional **AmneziaWG** UDP reserve
 
 Details: [docs/stealth.md](docs/stealth.md) · [docs/stealth.ru.md](docs/stealth.ru.md)
+
+## Multi-hop chains (RU entry → EU exit)
+
+Route users through an entry server (e.g. Russia) and exit from another region (e.g. EU). Clients connect only to the entry; the panel generates Xray outbounds on the entry host.
+
+Details: [docs/multihop.md](docs/multihop.md) · [docs/multihop.ru.md](docs/multihop.ru.md)
+
+```bash
+# Register exit node and bind user (see docs for full credentials JSON)
+curl -X POST http://localhost:8888/api/nodes -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"exit-eu","address":"eu.example.com","port":8443,"role":"exit","credentials":"{...}"}'
+curl -X PUT http://localhost:8888/api/users/1/chain -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"entry_node_id":1,"exit_node_id":2}'
+```
 
 ### Generate Reality keypair
 
