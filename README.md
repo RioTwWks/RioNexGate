@@ -1,221 +1,249 @@
-# RioNexGate — панель управления прокси
+**English** | [Русский](README.ru.md)
 
-**RioNexGate** — панель для управления прокси на **Xray-core** и **sing-box**: Go API, React UI, Telegram-бот, Docker Compose.
+# RioNexGate — proxy management panel
 
-MVP реализован: пользователи, VLESS-ссылки, QR, трафик, переключение ядра.
+**RioNexGate** is a management panel for **Xray-core** and **sing-box** proxies: Go API, React UI, Telegram bot, and Docker Compose.
 
-## Возможности
+It supports user management, VLESS/VMess/Trojan links, QR codes, traffic limits, stealth anti-DPI presets, multi-hop nodes, and an optional [RioNexTunnel](https://github.com/RioTwWks/RioNexTunnel) client API (devices, subscription, telemetry).
 
-- Два ядра: **xray** и **sing-box** (переключение в UI / API)
-- CRUD пользователей, лимиты трафика и срока действия
-- Клиентские ссылки и QR-коды (VLESS)
-- Дашборд со статистикой трафика
-- Telegram-бот для администратора
-- REST API с аутентификацией по API-ключу
-- Nginx как единая точка входа
+## Features
 
-## Требования
+- **Dual core**: **xray** and **sing-box** (switch in UI / API)
+- **Users**: CRUD, traffic limits, expiry, connection links and QR codes (VLESS, VMess, Trojan)
+- **Dashboard**: aggregate traffic stats and charts
+- **Stealth / anti-DPI**: VLESS + Reality + XHTTP (`stream-one`), Vision (TCP), optional TLS, ServerHello fragmentation, AmneziaWG reserve — see [docs/stealth.md](docs/stealth.md)
+- **Multi-hop nodes**: entry/exit node chains with health checks (UI **Nodes** page)
+- **RioNexTunnel client API**: device registration, JSON config sync, subscription URLs, telemetry, remote commands
+- **Telegram bot** for administrators
+- **REST API** with API-key authentication; OpenAPI / Swagger UI
+- **Nginx** as a single entry point
 
-- Linux (протестировано на Ubuntu 24.04)
-- **Docker Engine** + плагин **Docker Compose v2** (`docker compose`, не Python `docker-compose` v1)
-- Go 1.21+ и Node 18+ — только для локальной разработки без Docker
+## Documentation
 
-### Установка Docker (Linux)
+| Guide | Description |
+|-------|-------------|
+| [Stealth / anti-DPI](docs/stealth.md) | Reality, XHTTP, Vision, TLS, fragmentation, AmneziaWG |
+| [docs/README.md](docs/README.md) | Documentation index (EN / RU) |
+| [OpenAPI / Swagger](http://localhost:8888/api/docs) | Interactive API reference (after `make dev`) |
+
+## Requirements
+
+- Linux (tested on Ubuntu 24.04)
+- **Docker Engine** + **Docker Compose v2** plugin (`docker compose`, not Python `docker-compose` v1)
+- Go 1.21+ and Node 18+ — only for local development without Docker
+
+### Install Docker (Linux)
 
 ```bash
-# Официальный репозиторий Docker — см. https://docs.docker.com/engine/install/ubuntu/
+# Official Docker repo — see https://docs.docker.com/engine/install/ubuntu/
 sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker $USER
-# перелогиниться, чтобы группа docker применилась
+# log out and back in so the docker group applies
 ```
 
-Проверка:
+Verify:
 
 ```bash
-docker compose version   # v2.x или v5.x
+docker compose version   # v2.x or v5.x
 make docker-doctor
 ```
 
-> **Не используйте** устаревший пакет `docker-compose` v1 из apt (`sudo apt remove docker-compose`).  
-> После удаления Docker Desktop сбросьте `~/.docker/config.json`: `echo '{"auths":{}}' > ~/.docker/config.json`
+> **Do not use** the legacy `docker-compose` v1 package from apt (`sudo apt remove docker-compose`).  
+> After removing Docker Desktop, reset `~/.docker/config.json`: `echo '{"auths":{}}' > ~/.docker/config.json`
 
-## Быстрый старт
+## Quick start
 
 ```bash
-git clone <repo-url> RioNexGate
+git clone https://github.com/RioTwWks/RioNexGate.git
 cd RioNexGate
 
 make init
 ```
 
-Отредактируйте файлы:
+Edit:
 
-- `backend/config.yaml` — обязательно смените `server.api_key`
-- `.env` — `HTTP_PORT`, `TELEGRAM_BOT_TOKEN` (опционально)
+- `backend/config.yaml` — change `server.api_key` (required)
+- `.env` — `HTTP_PORT`, `TELEGRAM_BOT_TOKEN` (optional)
 
 ```bash
 make dev
 ```
 
-В другом терминале (первый запуск):
+In another terminal (first run):
 
 ```bash
 make migrate
 ```
 
-### URL после запуска
+### URLs after startup
 
-| URL | Описание |
-|-----|----------|
-| http://localhost:8888 | **Веб-панель** (nginx, порт из `HTTP_PORT`) |
-| http://localhost:8888/api/health | Health check API |
-| http://localhost:8080/api/health | Backend напрямую |
-| http://localhost:3000 | Frontend напрямую (без прокси API) |
+| URL | Description |
+|-----|-------------|
+| http://localhost:8888 | **Web panel** (nginx, port from `HTTP_PORT`) |
+| http://localhost:8888/api/health | API health check |
+| http://localhost:8888/api/docs | Swagger UI |
+| http://localhost:8080/api/health | Backend directly |
+| http://localhost:3000 | Frontend directly (API not proxied) |
 
-Войдите в панель с API-ключом из `backend/config.yaml` → `server.api_key`.
+Sign in to the panel with the API key from `backend/config.yaml` → `server.api_key`.
 
-Опционально — поднять ядра xray/sing-box:
+Optional — start xray/sing-box cores:
 
 ```bash
 make dev-cores
 ```
 
-## Makefile
+For stealth inbounds (host ports 443 / 8443), use the `cores` profile above. AmneziaWG reserve: `docker compose --profile awg up -d amneziawg`.
 
-| Команда | Действие |
-|---------|----------|
-| `make init` | Создать `config.yaml`, `.env`, каталоги `data/` |
-| `make dev` | Сборка и запуск (`docker compose up --build`) |
-| `make up` | Запуск в фоне |
-| `make down` | Остановить контейнеры |
-| `make dev-cores` | Запустить xray-core и sing-box (profile `cores`) |
-| `make dev-local` | Подсказка для запуска без Docker |
-| `make migrate` | Миграция БД в контейнере backend |
-| `make docker-doctor` | Проверка Docker |
-| `make test` | `go test` + `npm test` |
-| `make test-e2e` | Playwright E2E (backend + frontend dev) |
-| `make logs` | Логи compose |
-| `make clean` | Остановить и удалить volumes |
+## Web panel
 
-## Веб-панель
+1. Open http://localhost:8888
+2. Enter the API key from `backend/config.yaml`
+3. **Dashboard** — total traffic and chart
+4. **Users** — create, edit, links, QR, devices, chain binding
+5. **Nodes** — entry/exit nodes, health checks, multi-hop topology
+6. **Stealth** — Reality/XHTTP/Vision/TLS/fragmentation/AWG settings
+7. **Settings** — switch xray ↔ sing-box, reload core
 
-1. Откройте http://localhost:8888
-2. Введите API-ключ из `backend/config.yaml`
-3. **Dashboard** — общий трафик и график
-4. **Users** — создание, редактирование, ссылки и QR
-5. **Settings** — переключение xray ↔ sing-box, reload ядра
+On 401 errors: click **Logout** or clear `localStorage` (`rionexgate_api_key`).
 
-При ошибке 401: нажмите **Logout** или очистите `localStorage` (`rionexgate_api_key`).
+In the link modal you can choose **VLESS**, **VMess**, or **Trojan**. With stealth enabled, use `?all=true` for multi-profile links.
 
-В модальном окне ссылки можно выбрать протокол: **VLESS**, **VMess** или **Trojan**.
+## RioNexTunnel client API
 
-## Stealth / Anti-DPI (Reality + XHTTP)
+[RioNexTunnel](https://github.com/RioTwWks/RioNexTunnel) can register devices and sync JSON configs. Standard VLESS/VMess/Trojan clients keep working without changes.
 
-Секция `core.stealth` в `backend/config.yaml` включает пресеты для устойчивости к DPI:
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `POST /api/client/register` | none | Register device → `device_token`, `subscription_url` |
+| `GET /api/client/config` | `X-Device-Token` | JSON config with `config_hash` and transport profiles |
+| `POST /api/client/stats` | `X-Device-Token` | Session telemetry |
+| `GET /api/client/commands` | `X-Device-Token` | Long-poll or SSE (`?stream=sse`) for `refresh_config` etc. |
+| `GET /api/subscription/{token}` | none | Base64 subscription (newline-separated links) |
+| `GET /api/users/{id}/devices` | `X-API-Key` | List registered devices |
+| `DELETE /api/users/{id}/devices/{deviceId}` | `X-API-Key` | Revoke a device |
 
-- **VLESS + Reality + XHTTP** (`mode: stream-one`) на порту **443**
-- **VLESS + Reality + Vision** (TCP) на порту **8443**
-- Опционально **VLESS + TLS** на нестандартном порту
-
-Подробности: [`docs/stealth.md`](docs/stealth.md).
-
-### Генерация Reality keypair
+Example registration:
 
 ```bash
-# В контейнере xray или с установленным xray:
+curl -X POST http://localhost:8888/api/client/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","label":"laptop"}'
+```
+
+## Stealth / anti-DPI (Reality + XHTTP)
+
+The `core.stealth` section in `backend/config.yaml` enables DPI-resistant presets:
+
+- **VLESS + Reality + XHTTP** (`mode: stream-one`) on port **443**
+- **VLESS + Reality + Vision** (TCP) on port **8443**
+- Optional **VLESS + TLS** on a non-standard port
+- Optional **AmneziaWG** UDP reserve
+
+Details: [docs/stealth.md](docs/stealth.md) · [docs/stealth.ru.md](docs/stealth.ru.md)
+
+### Generate Reality keypair
+
+```bash
+# In the xray container or with xray installed:
 xray x25519
 # PrivateKey → core.stealth.reality.private_key
-# Password   → core.stealth.reality.public_key (pbk в клиентских ссылках)
+# Password   → core.stealth.reality.public_key (pbk in client links)
 ```
 
-Проверка `dest` с сервера:
-
-```bash
-curl -vI --connect-timeout 5 "https://your-cdn-host.example"
-```
-
-Мульти-профильные ссылки через API:
+Multi-profile links via API:
 
 ```bash
 curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 ```
 
-Запуск ядра с stealth inbound (порты 443/8443 на хосте):
+## Makefile
 
-```bash
-make dev-cores
-```
+| Command | Action |
+|---------|--------|
+| `make init` | Create `config.yaml`, `.env`, `data/` directories |
+| `make dev` | Build and run (`docker compose up --build`) |
+| `make up` | Run detached |
+| `make down` | Stop containers |
+| `make dev-cores` | Start xray-core and sing-box (profile `cores`) |
+| `make dev-local` | Hint for running without Docker |
+| `make migrate` | Run DB migration in backend container |
+| `make docker-doctor` | Docker diagnostics |
+| `make test` | `go test` + `npm test` |
+| `make test-e2e` | Playwright E2E (backend + frontend dev) |
+| `make logs` | Compose logs |
+| `make clean` | Stop and remove volumes |
 
 ## OpenAPI / Swagger
 
-После запуска панели откройте http://localhost:8888/api/docs — интерактивная документация API.  
-Спецификация: http://localhost:8888/api/openapi.yaml
+After starting the panel: http://localhost:8888/api/docs  
+Spec: http://localhost:8888/api/openapi.yaml
 
-Для «Try it out» в Swagger UI используется ключ из `localStorage` (`rionexgate_api_key`), если вы уже вошли в панель.
+For **Try it out** in Swagger UI, use the key from `localStorage` (`rionexgate_api_key`) if you are already signed in.
 
 ## HTTPS (Let's Encrypt)
 
-Пример настройки TLS для nginx:
+Example TLS setup for nginx:
 
-1. Убедитесь, что домен указывает на сервер и порт 80 свободен.
-2. Получите сертификат:
+1. Ensure the domain points to the server and port 80 is free.
+2. Obtain a certificate:
    ```bash
    chmod +x scripts/letsencrypt.sh
    ./scripts/letsencrypt.sh panel.example.com
    ```
-3. Включите HTTPS-конфиг nginx:
+3. Enable HTTPS nginx config:
    ```bash
    cp nginx/nginx-https.conf.example nginx/nginx.conf
    ```
-4. В `docker-compose.yml` раскомментируйте порт `HTTPS_PORT` (по умолчанию `8443`).
-5. `make up` — панель на `https://panel.example.com:8443`.
+4. In `docker-compose.yml`, uncomment `HTTPS_PORT` (default `8443`).
+5. `make up` — panel at `https://panel.example.com:8443`.
 
-Подробности в комментариях [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.example) и [`scripts/letsencrypt.sh`](scripts/letsencrypt.sh).
+See comments in [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.example) and [`scripts/letsencrypt.sh`](scripts/letsencrypt.sh).
 
-## CI и E2E-тесты
+## CI and E2E tests
 
 GitHub Actions (`.github/workflows/ci.yml`):
 
-- `go test` (backend, включая API integration tests)
+- `go test` (backend, including API integration tests)
 - `npm run build` (frontend)
-- Playwright smoke-тесты (`e2e/`)
+- Playwright smoke tests (`e2e/`)
 
-Локально:
+Locally:
 
 ```bash
 make test
-make test-e2e   # требует Node 20+, Go 1.21+, gcc (CGO)
+make test-e2e   # requires Node 20+, Go 1.21+, gcc (CGO)
 ```
 
-## Telegram-бот
+## Telegram bot
 
-Настройте в `backend/config.yaml` или через `.env` (`TELEGRAM_BOT_TOKEN`).
+Configure in `backend/config.yaml` or via `.env` (`TELEGRAM_BOT_TOKEN`).
 
-| Команда | Описание |
-|---------|----------|
-| `/start` | Список команд |
-| `/users` | Список пользователей |
-| `/add <email> [gb] [days]` | Создать пользователя |
-| `/link <user_id>` | Ссылка подключения |
-| `/traffic <user_id>` | Использованный трафик |
-| `/reload` | Перегенерировать конфиг ядра |
+| Command | Description |
+|---------|-------------|
+| `/start` | List commands |
+| `/users` | List users |
+| `/add <email> [gb] [days]` | Create user |
+| `/link <user_id>` | Connection link |
+| `/traffic <user_id>` | Used traffic |
+| `/reload` | Regenerate core config |
 
-## Конфигурация
+## Configuration
 
 ### `backend/config.yaml`
 
 ```yaml
 server:
   port: 8080
-  api_key: "change-me"          # ключ для панели и API
+  api_key: "change-me"          # panel and API key
 
 database:
   path: "./data/rionexgate.db"
 
 core:
-  type: "xray"                  # или "sing-box"
+  type: "xray"                  # or "sing-box"
   listen_port: 443
-  public_host: "your.domain"    # для VLESS-ссылок
+  public_host: "your.domain"    # host in VLESS links
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
@@ -233,7 +261,7 @@ limits:
   default_expire_days: 30
 ```
 
-Пример без секретов: [`backend/config.example.yaml`](backend/config.example.yaml).
+Full example (no secrets): [`backend/config.example.yaml`](backend/config.example.yaml).
 
 ### `.env`
 
@@ -243,36 +271,39 @@ TELEGRAM_BOT_TOKEN=
 BACKUP_DIR=./backups
 ```
 
-Порт **8888** по умолчанию — порт 80 часто занят системным nginx/apache.
+Port **8888** is the default — port 80 is often taken by system nginx/apache.
 
 ## API
 
-Базовый URL: `http://localhost:8888/api`  
-Аутентификация: заголовок `X-API-Key: <api_key>`
+Base URL: `http://localhost:8888/api`  
+Authentication: header `X-API-Key: <api_key>`
 
 ```bash
 curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/health
 curl -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/users
 ```
 
-| Метод | Эндпоинт | Описание |
-|-------|----------|----------|
-| GET | `/health` | Health check (без auth) |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check (no auth) |
 | GET | `/docs` | Swagger UI (OpenAPI) |
-| GET | `/openapi.yaml` | OpenAPI спецификация |
-| GET | `/protocols` | Поддерживаемые протоколы ссылок |
-| GET | `/users` | Список пользователей |
-| POST | `/users` | Создать пользователя |
-| GET/PUT/DELETE | `/users/{id}` | CRUD |
-| GET | `/users/{id}/link?proto=vless\|vmess\|trojan` | Строка подключения |
-| GET | `/users/{id}/qr` | QR-код (PNG) |
-| GET | `/stats/total` | Общая статистика |
-| GET | `/stats/user/{id}` | Трафик пользователя |
-| GET | `/core/type` | Активное ядро |
-| PUT | `/core/type` | Переключить ядро |
-| POST | `/core/reload` | Перезагрузить конфиг |
+| GET | `/openapi.yaml` | OpenAPI spec |
+| GET | `/protocols` | Supported link protocols |
+| GET/POST | `/users` | List / create users |
+| GET/PUT/DELETE | `/users/{id}` | User CRUD |
+| GET | `/users/{id}/link?proto=vless\|vmess\|trojan` | Connection string |
+| GET | `/users/{id}/profiles` | Stealth transport profiles |
+| GET | `/users/{id}/qr` | QR code (PNG) |
+| GET/DELETE | `/users/{id}/devices/...` | RioNexTunnel devices |
+| PUT | `/users/{id}/chain` | Bind entry/exit nodes |
+| GET/POST | `/nodes` | Multi-hop nodes |
+| GET/PUT | `/stealth/settings` | Stealth panel settings |
+| GET | `/stats/total` | Aggregate stats |
+| GET | `/stats/user/{id}` | Per-user traffic |
+| GET/PUT | `/core/type` | Active core |
+| POST | `/core/reload` | Reload core config |
 
-## Локальная разработка (без Docker)
+## Local development (without Docker)
 
 ```bash
 make init
@@ -282,7 +313,7 @@ make -C backend dev          # API :8080
 cd frontend && npm install && npm run dev   # UI :5173, proxy /api → :8080
 ```
 
-## Структура проекта
+## Project structure
 
 ```
 RioNexGate/
@@ -290,7 +321,7 @@ RioNexGate/
 │   ├── cmd/main.go              # serve + migrate
 │   ├── internal/
 │   │   ├── api/                 # REST, chi, middleware
-│   │   ├── core/                # templates, CoreManager
+│   │   ├── core/                # templates, CoreManager, links
 │   │   ├── db/                  # GORM
 │   │   ├── telegram/
 │   │   └── config/
@@ -298,7 +329,7 @@ RioNexGate/
 │   └── go.mod
 ├── frontend/
 │   └── src/
-│       ├── pages/               # Login, Dashboard, Users, Settings
+│       ├── pages/               # Login, Dashboard, Users, Nodes, Stealth, Settings
 │       ├── components/
 │       └── services/api.ts
 ├── nginx/
@@ -309,42 +340,42 @@ RioNexGate/
 │   ├── docker-doctor.sh
 │   ├── backup.sh
 │   └── restore.sh
-├── data/                        # SQLite, конфиги ядер (gitignored)
+├── docs/
+│   ├── README.md                # documentation index
+│   ├── stealth.md               # stealth guide (EN)
+│   └── stealth.ru.md              # stealth guide (RU)
+├── data/                        # SQLite, core configs (gitignored)
 ├── docker-compose.yml
-├── Dockerfile.backend
-├── Dockerfile.frontend
-├── Dockerfile.nginx
 ├── Makefile
 └── .env.example
 ```
 
-## Резервное копирование
+## Backup
 
 ```bash
 ./scripts/backup.sh
 ./scripts/restore.sh backups/rionexgate-data-YYYYMMDD_HHMMSS.tar.gz
 ```
 
-## Устранение неполадок
+## Troubleshooting
 
-| Симптом | Решение |
-|---------|---------|
-| `permission denied` (docker.sock) | `sudo usermod -aG docker $USER`, перелогиниться |
+| Symptom | Fix |
+|---------|-----|
+| `permission denied` (docker.sock) | `sudo usermod -aG docker $USER`, log out/in |
 | `docker-credential-desktop not found` | `echo '{"auths":{}}' > ~/.docker/config.json` |
-| `KeyError: 'id'` (compose) | Удалить `docker-compose` v1, использовать `docker compose` v2 |
-| Порт 80 занят | Используйте `HTTP_PORT=8888` в `.env` |
-| 401 в панели | Неверный API key; Logout или очистить `rionexgate_api_key` в localStorage |
-| `make dev` не видит docker | Перелогиниться после `usermod`; `make` использует `sg docker` как fallback |
-| xray stats не работают | `make dev-cores`, проверить `core.xray.api_address` |
+| `KeyError: 'id'` (compose) | Remove `docker-compose` v1, use `docker compose` v2 |
+| Port 80 busy | Use `HTTP_PORT=8888` in `.env` |
+| 401 in panel | Wrong API key; Logout or clear `rionexgate_api_key` in localStorage |
+| `make dev` cannot access docker | Re-login after `usermod`; `make` falls back to `sg docker` |
+| xray stats not working | `make dev-cores`, check `core.xray.api_address` |
 
-Диагностика: `make docker-doctor`
+Diagnostics: `make docker-doctor`
 
-## Документация для разработчиков
+## Developer documentation
 
-- План MVP: [`.cursor/plans/mvp.md`](.cursor/plans/mvp.md)
-- Статус: [`.cursor/STATUS.md`](.cursor/STATUS.md)
-- Задачи: [`.cursor/tasks.md`](.cursor/tasks.md)
+- MVP plan: [`.cursor/plans/mvp.md`](.cursor/plans/mvp.md)
+- Status: [`.cursor/STATUS.md`](.cursor/STATUS.md)
 
-## Лицензия
+## License
 
 MIT License.
