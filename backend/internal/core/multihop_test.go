@@ -44,6 +44,43 @@ func TestBuildMultihopDataGeneratesOutbounds(t *testing.T) {
 	}
 }
 
+func TestGenerateMultihopXrayConfigWithUICredentials(t *testing.T) {
+	exit := models.Node{
+		ID:          2,
+		Name:        "RelayEU",
+		Address:     "exit.eu.example",
+		Port:        8443,
+		Role:        models.NodeRoleExit,
+		Protocol:    "vless",
+		Credentials: `{"uuid":"relay-uuid","public_key":"pk","short_id":"ab12","sni":"www.cloudflare.com"}`,
+	}
+	users := []models.User{{UUID: "u1", Email: "user@example.com", ExitNodeID: &exit.ID}}
+	multihop := BuildMultihopData(
+		&config.MultihopConfig{Enabled: true, LocalRole: "entry"},
+		users,
+		[]models.Node{exit},
+		func(models.User) *models.Node { return &exit },
+	)
+
+	raw, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, multihop)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(raw)
+	checks := []string{
+		`"security": "reality"`,
+		`"flow": "xtls-rprx-vision"`,
+		`"serverName": "www.cloudflare.com"`,
+		`"publicKey": "pk"`,
+		`"shortId": "ab12"`,
+	}
+	for _, c := range checks {
+		if !strings.Contains(body, c) {
+			t.Fatalf("missing %q in config:\n%s", c, body)
+		}
+	}
+}
+
 func TestGenerateMultihopXrayConfig(t *testing.T) {
 	exit := models.Node{
 		ID:       2,
