@@ -60,10 +60,11 @@ func BuildMultihopData(multihop *config.MultihopConfig, users []models.User, exi
 			continue
 		}
 		if _, ok := outboundByID[exit.ID]; !ok {
+			creds := exit.ParsedCredentials().NormalizeForOutbound(exit.Address)
 			outboundByID[exit.ID] = MultihopOutbound{
 				Tag:   exit.OutboundTag(),
 				Node:  *exit,
-				Creds: exit.ParsedCredentials(),
+				Creds: creds,
 				Chain: true,
 			}
 		}

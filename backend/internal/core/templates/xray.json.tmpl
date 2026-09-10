@@ -189,7 +189,7 @@
         "network": "{{$ob.Creds.NetworkOrDefault}}",
         "security": "{{$ob.Creds.SecurityOrDefault}}"{{if eq $ob.Creds.SecurityOrDefault "reality"}},
         "realitySettings": {
-          "serverName": "{{if $ob.Creds.SNI}}{{$ob.Creds.SNI}}{{else}}{{$ob.Node.Address}}{{end}}",
+          "serverName": "{{$ob.Creds.OutboundSNI $ob.Node.Address}}",
           "fingerprint": "{{$ob.Creds.FingerprintOrDefault}}",
           "publicKey": "{{$ob.Creds.PublicKey}}",
           "shortId": "{{$ob.Creds.ShortID}}"

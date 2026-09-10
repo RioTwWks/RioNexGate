@@ -50,6 +50,29 @@ func (c NodeCredentials) FingerprintOrDefault() string {
 	return "firefox"
 }
 
+// NormalizeForOutbound fills in relay hop defaults when exit credentials were saved
+// via the panel UI (uuid/public_key/short_id only). Reality hop requires security,
+// flow (Vision), and a serverName that matches the exit inbound serverNames — not
+// the exit node DNS address.
+func (c NodeCredentials) NormalizeForOutbound(exitAddress string) NodeCredentials {
+	out := c
+	if out.PublicKey != "" && out.ShortID != "" && out.SecurityOrDefault() == "none" {
+		out.Security = "reality"
+	}
+	if out.Security == "reality" && out.NetworkOrDefault() == "tcp" && out.Flow == "" {
+		out.Flow = "xtls-rprx-vision"
+	}
+	return out
+}
+
+// OutboundSNI returns the Reality/TLS serverName for the relay outbound.
+func (c NodeCredentials) OutboundSNI(exitAddress string) string {
+	if c.SNI != "" {
+		return c.SNI
+	}
+	return exitAddress
+}
+
 func ParseNodeCredentials(raw string) NodeCredentials {
 	if raw == "" {
 		return NodeCredentials{}

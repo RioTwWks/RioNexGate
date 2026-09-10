@@ -22,6 +22,10 @@ export function NodeForm({ initial, submitLabel, onCancel, onSubmit }: Props) {
   const [uuid, setUuid] = useState(creds.uuid ?? '');
   const [publicKey, setPublicKey] = useState(creds.public_key ?? '');
   const [shortId, setShortId] = useState(creds.short_id ?? '');
+  const [sni, setSni] = useState(creds.sni ?? '');
+  const [flow, setFlow] = useState(creds.flow ?? 'xtls-rprx-vision');
+  const [security, setSecurity] = useState(creds.security ?? 'reality');
+  const [network, setNetwork] = useState(creds.network ?? 'tcp');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,9 +34,29 @@ export function NodeForm({ initial, submitLabel, onCancel, onSubmit }: Props) {
     setSaving(true);
     setError('');
     try {
+      const baseCreds = initial ? parseCredentials(initial.credentials) : {};
+      const credentialFields: Record<string, unknown> = { ...baseCreds };
+      if (role === 'exit') {
+        Object.assign(credentialFields, {
+          uuid: uuid || undefined,
+          public_key: publicKey || undefined,
+          short_id: shortId || undefined,
+          sni: sni || undefined,
+          flow: network === 'tcp' ? (flow || undefined) : undefined,
+          security: security || undefined,
+          network: network || undefined,
+          fingerprint: credentialFields.fingerprint ?? 'firefox',
+        });
+      } else {
+        Object.assign(credentialFields, {
+          uuid: uuid || undefined,
+          public_key: publicKey || undefined,
+          short_id: shortId || undefined,
+        });
+      }
       await onSubmit({
         name, address, port, role, protocol, region: region || undefined, priority, active,
-        credentials: stringifyCredentials({ uuid: uuid || undefined, public_key: publicKey || undefined, short_id: shortId || undefined }),
+        credentials: stringifyCredentials(credentialFields),
       });
     } catch { setError('Failed to save node'); } finally { setSaving(false); }
   };
@@ -52,10 +76,28 @@ export function NodeForm({ initial, submitLabel, onCancel, onSubmit }: Props) {
       </select>
       <input type="number" value={priority} onChange={(e) => setPriority(Number(e.target.value))} placeholder="Priority" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" />
       <label className="flex items-center gap-2"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /><span className="text-sm">Active</span></label>
-      <details><summary className="text-sm cursor-pointer">Credentials</summary>
-        <input value={uuid} onChange={(e) => setUuid(e.target.value)} placeholder="UUID" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-        <input value={publicKey} onChange={(e) => setPublicKey(e.target.value)} placeholder="Public key" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-        <input value={shortId} onChange={(e) => setShortId(e.target.value)} placeholder="Short ID" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
+      <details open={role === 'exit'}><summary className="text-sm cursor-pointer">Credentials</summary>
+        <input value={uuid} onChange={(e) => setUuid(e.target.value)} placeholder="Relay UUID (EU inbound user)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
+        <input value={publicKey} onChange={(e) => setPublicKey(e.target.value)} placeholder="EU Reality public key (pbk)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
+        <input value={shortId} onChange={(e) => setShortId(e.target.value)} placeholder="EU Reality short ID" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
+        {role === 'exit' && (
+          <>
+            <input value={sni} onChange={(e) => setSni(e.target.value)} placeholder="SNI (EU serverNames, e.g. www.cloudflare.com)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" data-testid="node-sni" />
+            <select value={security} onChange={(e) => setSecurity(e.target.value)} className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs">
+              <option value="reality">reality</option>
+              <option value="tls">tls</option>
+              <option value="none">none</option>
+            </select>
+            <select value={network} onChange={(e) => setNetwork(e.target.value)} className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs">
+              <option value="tcp">tcp (Vision)</option>
+              <option value="xhttp">xhttp</option>
+            </select>
+            {network === 'tcp' && (
+              <input value={flow} onChange={(e) => setFlow(e.target.value)} placeholder="flow (xtls-rprx-vision)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
+            )}
+            <p className="mt-2 text-xs text-slate-400">SNI must match EU inbound Reality serverNames — not rio2skadi.pro.</p>
+          </>
+        )}
       </details>
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-slate-400">Cancel</button>
