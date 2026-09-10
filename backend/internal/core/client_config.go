@@ -52,8 +52,9 @@ type ClientConfig struct {
 
 func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) (*ClientConfig, error) {
 	ep := ResolveClientEndpoint(host, port, user, entry)
-	servers := make([]ClientServer, 0, len(SupportedProtocols))
-	for _, proto := range SupportedProtocols {
+	protocols := ClientConfigProtocols(stealth)
+	servers := make([]ClientServer, 0, len(protocols))
+	for _, proto := range protocols {
 		link := GetClientLink(ep.Host, ep.Port, user, proto, stealth)
 		srvPort := ep.Port
 		if proto == "vless" {
@@ -121,6 +122,11 @@ func vlessLinkPort(link string, fallback int) int {
 	return fallback
 }
 
+// vlessLinkQueryKeys are copied from VLESS share links into RioNexTunnel transport params.
+var vlessLinkQueryKeys = []string{
+	"type", "security", "flow", "sni", "fp", "pbk", "sid", "path", "mode", "alpn",
+}
+
 // vlessTransportParams derives transport metadata from a VLESS share link for RioNexTunnel.
 func vlessTransportParams(link string) map[string]string {
 	params := map[string]string{"type": "tcp", "security": "none"}
@@ -128,18 +134,17 @@ func vlessTransportParams(link string) map[string]string {
 		return params
 	}
 	rest := strings.TrimPrefix(link, "vless://")
-	if idx := strings.Index(rest, "?"); idx >= 0 {
-		q, err := url.ParseQuery(rest[idx+1:])
-		if err == nil {
-			if t := q.Get("type"); t != "" {
-				params["type"] = t
-			}
-			if s := q.Get("security"); s != "" {
-				params["security"] = s
-			}
-			if f := q.Get("flow"); f != "" {
-				params["flow"] = f
-			}
+	qIdx := strings.Index(rest, "?")
+	if qIdx < 0 {
+		return params
+	}
+	q, err := url.ParseQuery(rest[qIdx+1:])
+	if err != nil {
+		return params
+	}
+	for _, key := range vlessLinkQueryKeys {
+		if v := q.Get(key); v != "" {
+			params[key] = v
 		}
 	}
 	return params
