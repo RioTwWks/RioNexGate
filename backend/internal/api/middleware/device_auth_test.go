@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rionexgate/internal/db"
@@ -57,5 +58,27 @@ func TestDeviceTokenAuth(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK || gotUserID != user.ID {
 		t.Fatalf("expected authorized device, code=%d user=%d", rr.Code, gotUserID)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/?token="+device.Token, nil)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected authorized device via query token, code=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	subToken, err := database.EnsureSubscriptionToken(user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Device-Token", subToken)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for subscription token, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "subscription token cannot be used") {
+		t.Fatalf("expected subscription token hint, got %s", rr.Body.String())
 	}
 }

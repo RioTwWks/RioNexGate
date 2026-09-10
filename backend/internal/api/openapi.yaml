@@ -211,6 +211,11 @@ paths:
         - DeviceTokenAuth: []
       parameters:
         - $ref: "#/components/parameters/DeviceToken"
+        - name: token
+          in: query
+          description: Device token alternative to X-Device-Token header (not subscription token)
+          schema:
+            type: string
       responses:
         "200":
           description: Client configuration
@@ -784,6 +789,9 @@ components:
       properties:
         error:
           type: string
+        hint:
+          type: string
+          description: Guidance when device token is missing or a subscription token was sent by mistake
   responses:
     Unauthorized:
       description: Missing or invalid API key
@@ -792,7 +800,7 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     DeviceUnauthorized:
-      description: Missing or invalid X-Device-Token
+      description: Missing or invalid device token (subscription token is not accepted)
       content:
         application/json:
           schema:

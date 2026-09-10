@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"rionexgate/internal/db"
@@ -20,26 +21,50 @@ func DeviceFromContext(ctx context.Context) (*DeviceContext, bool) {
 	return dc, ok
 }
 
+func deviceTokenFromRequest(r *http.Request) string {
+	if token := r.Header.Get("X-Device-Token"); token != "" {
+		return token
+	}
+	return r.URL.Query().Get("token")
+}
+
+func writeDeviceAuthError(w http.ResponseWriter, status int, msg, hint string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	payload := map[string]string{"error": msg}
+	if hint != "" {
+		payload["hint"] = hint
+	}
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
 func DeviceTokenAuth(database *db.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get("X-Device-Token")
+			token := deviceTokenFromRequest(r)
 			if token == "" {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				writeDeviceAuthError(w, http.StatusUnauthorized, "unauthorized",
+					"RioNexTunnel requires X-Device-Token (device token from POST /api/client/register), not subscription token")
 				return
 			}
 			device, err := database.GetDeviceByToken(token)
 			if err != nil {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				if user, subErr := database.GetUserBySubscriptionToken(token); subErr == nil && user != nil {
+					writeDeviceAuthError(w, http.StatusUnauthorized, "subscription token cannot be used for client config",
+						"Use device_token from POST /api/client/register or GET /api/users/{id}/devices (X-API-Key)")
+					return
+				}
+				writeDeviceAuthError(w, http.StatusUnauthorized, "invalid device token",
+					"Register the device via POST /api/client/register or list tokens at GET /api/users/{id}/devices")
 				return
 			}
 			user, err := database.GetUser(device.UserID)
 			if err != nil {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				writeDeviceAuthError(w, http.StatusUnauthorized, "unauthorized", "")
 				return
 			}
 			if !user.Active {
-				http.Error(w, `{"error":"user inactive"}`, http.StatusForbidden)
+				writeDeviceAuthError(w, http.StatusForbidden, "user inactive", "")
 				return
 			}
 			dc := &DeviceContext{Device: device, User: user}
