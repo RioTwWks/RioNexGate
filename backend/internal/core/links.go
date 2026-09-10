@@ -119,8 +119,33 @@ func buildTrojanLink(host string, port int, user models.User) string {
 		user.UUID, host, port, params.Encode(), fragment)
 }
 
+// primaryVLESSStealthLink returns the lowest-latency VLESS profile when stealth is active.
+// Vision/TCP is preferred over XHTTP for multihop and mobile clients; XHTTP remains available
+// as a separate subscription profile for DPI-heavy networks.
+func primaryVLESSStealthLink(host string, port int, user models.User, stealth *config.StealthConfig) string {
+	if stealth == nil || !stealth.IsActive() {
+		return buildVLESSLink(host, port, user)
+	}
+	if stealth.Vision.Enabled {
+		return buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth)
+	}
+	if stealth.XHTTP.Enabled {
+		return buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth)
+	}
+	if stealth.TLS.Enabled {
+		return buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth)
+	}
+	return buildVLESSLink(host, port, user)
+}
+
+// LegacyProtocolsInSubscription reports whether plain VMess/Trojan links belong in a subscription.
+// With stealth inbounds (Reality/XHTTP/Vision), legacy TCP links use the wrong port and security.
+func LegacyProtocolsInSubscription(stealth *config.StealthConfig) bool {
+	return stealth == nil || !stealth.IsActive()
+}
+
 // GetClientLink returns a single client link for the given protocol.
-// For vless with stealth enabled, the primary XHTTP profile is returned.
+// For vless with stealth enabled, the primary Vision/TCP profile is returned when available.
 func GetClientLink(host string, port int, user models.User, protocol string, stealth *config.StealthConfig) string {
 	switch protocol {
 	case "vmess":
@@ -128,10 +153,7 @@ func GetClientLink(host string, port int, user models.User, protocol string, ste
 	case "trojan":
 		return buildTrojanLink(host, port, user)
 	default:
-		if stealth != nil && stealth.IsActive() && stealth.XHTTP.Enabled {
-			return buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth)
-		}
-		return buildVLESSLink(host, port, user)
+		return primaryVLESSStealthLink(host, port, user, stealth)
 	}
 }
 
@@ -142,9 +164,31 @@ func GetClientLinkProfiles(host string, port int, user models.User, stealth *con
 	}
 	var profiles []LinkProfile; priority := 1
 	if stealth.IsActive() {
-		if stealth.XHTTP.Enabled { profiles = append(profiles, LinkProfile{Profile: "xhttp-primary", Transport: "xhttp", Priority: priority, Port: stealth.XHTTP.Port, Tags: "xhttp-primary", Link: buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth)}); priority++ }
-		if stealth.Vision.Enabled { profiles = append(profiles, LinkProfile{Profile: "vision-ios-fallback", Transport: "tcp", Priority: priority, Port: stealth.Vision.Port, Tags: "vision-ios-fallback", Link: buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth)}); priority++ }
-		if stealth.TLS.Enabled { profiles = append(profiles, LinkProfile{Profile: "tls-mobile", Transport: "tcp", Priority: priority, Port: stealth.TLS.Port, Tags: "tls-mobile,mux-hint", Link: buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth)}); priority++ }
+		// Vision/TCP first: lowest latency for multihop and mobile; matches RU→EU relay transport.
+		if stealth.Vision.Enabled {
+			profiles = append(profiles, LinkProfile{
+				Profile: "vision-tcp-primary", Transport: "tcp", Priority: priority,
+				Port: stealth.Vision.Port, Tags: "vision-tcp-primary,low-latency",
+				Link: buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth),
+			})
+			priority++
+		}
+		if stealth.XHTTP.Enabled {
+			profiles = append(profiles, LinkProfile{
+				Profile: "xhttp-anti-dpi", Transport: "xhttp", Priority: priority,
+				Port: stealth.XHTTP.Port, Tags: "xhttp-anti-dpi",
+				Link: buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth),
+			})
+			priority++
+		}
+		if stealth.TLS.Enabled {
+			profiles = append(profiles, LinkProfile{
+				Profile: "tls-mobile", Transport: "tcp", Priority: priority,
+				Port: stealth.TLS.Port, Tags: "tls-mobile,mux-hint",
+				Link: buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth),
+			})
+			priority++
+		}
 	}
 	if stealth.AWGActive() && peer != nil {
 		ini := BuildAWGClientConfig(host, &stealth.AWG, peer)

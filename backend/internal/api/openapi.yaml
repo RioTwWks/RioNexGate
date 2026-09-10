@@ -755,7 +755,7 @@ components:
       properties:
         profile:
           type: string
-          example: xhttp-primary
+          example: vision-tcp-primary
         transport:
           type: string
           example: xhttp
