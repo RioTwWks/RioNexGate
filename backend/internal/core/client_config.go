@@ -4,6 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"rionexgate/internal/config"
 	"rionexgate/internal/models"
@@ -52,17 +55,21 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 	servers := make([]ClientServer, 0, len(SupportedProtocols))
 	for _, proto := range SupportedProtocols {
 		link := GetClientLink(ep.Host, ep.Port, user, proto, stealth)
+		srvPort := ep.Port
+		if proto == "vless" {
+			srvPort = vlessLinkPort(link, ep.Port)
+		}
 		srv := ClientServer{
 			Protocol: proto,
 			Link:     link,
 			ID:       user.UUID,
 			Host:     ep.Host,
-			Port:     ep.Port,
+			Port:     srvPort,
 		}
 		switch proto {
 		case "vless":
 			srv.Encryption = "none"
-			srv.Params = map[string]string{"type": "tcp", "security": "none"}
+			srv.Params = vlessTransportParams(link)
 		case "vmess":
 			srv.Params = map[string]string{"net": "tcp", "type": "none"}
 		case "trojan":
@@ -98,6 +105,44 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 		Inbounds:   body.Inbounds,
 		DNS:        body.DNS,
 	}, nil
+}
+
+// vlessLinkPort extracts the destination port from a VLESS share link.
+func vlessLinkPort(link string, fallback int) int {
+	u, err := url.Parse(link)
+	if err != nil || u.Host == "" {
+		return fallback
+	}
+	if p := u.Port(); p != "" {
+		if n, err := strconv.Atoi(p); err == nil && n > 0 {
+			return n
+		}
+	}
+	return fallback
+}
+
+// vlessTransportParams derives transport metadata from a VLESS share link for RioNexTunnel.
+func vlessTransportParams(link string) map[string]string {
+	params := map[string]string{"type": "tcp", "security": "none"}
+	if !strings.HasPrefix(link, "vless://") {
+		return params
+	}
+	rest := strings.TrimPrefix(link, "vless://")
+	if idx := strings.Index(rest, "?"); idx >= 0 {
+		q, err := url.ParseQuery(rest[idx+1:])
+		if err == nil {
+			if t := q.Get("type"); t != "" {
+				params["type"] = t
+			}
+			if s := q.Get("security"); s != "" {
+				params["security"] = s
+			}
+			if f := q.Get("flow"); f != "" {
+				params["flow"] = f
+			}
+		}
+	}
+	return params
 }
 
 func ConfigHash(body ClientConfigBody) (string, error) {

@@ -180,11 +180,11 @@ func TestGetClientLinkProfiles(t *testing.T) {
 	if len(profiles) != 2 {
 		t.Fatalf("expected 2 profiles, got %d", len(profiles))
 	}
-	if profiles[0].Profile != "xhttp-primary" || profiles[0].Priority != 1 {
+	if profiles[0].Profile != "vision-tcp-primary" || profiles[0].Priority != 1 {
 		t.Fatalf("unexpected primary profile: %+v", profiles[0])
 	}
-	if profiles[1].Profile != "vision-ios-fallback" {
-		t.Fatalf("unexpected fallback profile: %+v", profiles[1])
+	if profiles[1].Profile != "xhttp-anti-dpi" {
+		t.Fatalf("unexpected xhttp profile: %+v", profiles[1])
 	}
 }
 
@@ -207,6 +207,33 @@ func TestGenerateStealthXrayConfigFragmentationOnTLS(t *testing.T) {
 	if !strings.Contains(string(data), `"packets": "tlshello"`) { t.Fatal("expected tlshello fragmentation") }
 }
 
+
+func TestBuildSubscriptionStealthOmitsLegacyProtocols(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
+	links := BuildSubscriptionLinks("host.example", 443, user, testStealthConfig(), nil, nil)
+	joined := strings.Join(links, "\n")
+	if strings.Contains(joined, "vmess://") || strings.Contains(joined, "trojan://") {
+		t.Fatalf("stealth subscription must not include legacy vmess/trojan links: %s", joined)
+	}
+	if !strings.Contains(joined, "type=tcp") || !strings.Contains(joined, "xtls-rprx-vision") {
+		t.Fatalf("expected vision-tcp link first: %s", joined)
+	}
+	if !strings.Contains(joined, "type=xhttp") {
+		t.Fatalf("expected xhttp profile in subscription: %s", joined)
+	}
+	if links[0] != buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig()) {
+		t.Fatalf("vision profile must be first in subscription")
+	}
+}
+
+func TestGetClientLinkPrefersVisionOverXHTTP(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
+	stealth := testStealthConfig()
+	link := GetClientLink("host.example", 443, user, "vless", stealth)
+	if !strings.Contains(link, "type=tcp") || !strings.Contains(link, "xtls-rprx-vision") {
+		t.Fatalf("expected vision link, got %s", link)
+	}
+}
 
 func TestEncodeSubscription(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}

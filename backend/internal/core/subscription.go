@@ -1,9 +1,25 @@
 package core
 import ("encoding/base64"; "strings"; "rionexgate/internal/config"; "rionexgate/internal/models")
 func BuildSubscriptionLinks(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) []string {
-	ep := ResolveClientEndpoint(host, port, user, entry); links := []string{}
-	for _, p := range GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer) { if p.Link != "" { links = append(links, p.Link) } }
-	for _, proto := range SupportedProtocols { if proto == "vless" { continue }; if l := GetClientLink(ep.Host, ep.Port, user, proto, stealth); l != "" { links = append(links, l) } }
+	ep := ResolveClientEndpoint(host, port, user, entry)
+	links := []string{}
+	for _, p := range GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer) {
+		if p.Link != "" {
+			links = append(links, p.Link)
+		}
+	}
+	// Plain VMess/Trojan links target legacy TCP inbounds only; with stealth they use the wrong
+	// port/security and cause client auto-fallback delays (high reported ping, failed connects).
+	if LegacyProtocolsInSubscription(stealth) {
+		for _, proto := range SupportedProtocols {
+			if proto == "vless" {
+				continue
+			}
+			if l := GetClientLink(ep.Host, ep.Port, user, proto, stealth); l != "" {
+				links = append(links, l)
+			}
+		}
+	}
 	return links
 }
 func BuildSubscriptionBase64(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) string {
