@@ -72,3 +72,31 @@ func TestBuildClientConfigStealthProfiles(t *testing.T) {
 		t.Fatalf("expected vision port 8443 in vless server, got %d (link=%s)", cfg.Servers[0].Port, cfg.Servers[0].Link)
 	}
 }
+
+func TestBuildClientConfigStealthOmitsLegacyServers(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Servers) != 1 {
+		t.Fatalf("expected 1 server (vless only), got %d", len(cfg.Servers))
+	}
+	if cfg.Servers[0].Protocol != "vless" {
+		t.Fatalf("expected vless server only, got %+v", cfg.Servers[0])
+	}
+}
+
+func TestVlessTransportParamsIncludesReality(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
+	link := buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig())
+	params := vlessTransportParams(link)
+	for _, key := range []string{"security", "flow", "sni", "fp", "pbk", "sid"} {
+		if params[key] == "" {
+			t.Fatalf("expected %s in transport params, got %+v", key, params)
+		}
+	}
+	if params["security"] != "reality" || params["flow"] != "xtls-rprx-vision" {
+		t.Fatalf("unexpected reality params: %+v", params)
+	}
+}

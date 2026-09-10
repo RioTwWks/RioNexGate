@@ -144,6 +144,14 @@ func LegacyProtocolsInSubscription(stealth *config.StealthConfig) bool {
 	return stealth == nil || !stealth.IsActive()
 }
 
+// ClientConfigProtocols returns protocols for RioNexTunnel servers[].
+func ClientConfigProtocols(stealth *config.StealthConfig) []string {
+	if LegacyProtocolsInSubscription(stealth) {
+		return SupportedProtocols
+	}
+	return []string{"vless"}
+}
+
 // GetClientLink returns a single client link for the given protocol.
 // For vless with stealth enabled, the primary Vision/TCP profile is returned when available.
 func GetClientLink(host string, port int, user models.User, protocol string, stealth *config.StealthConfig) string {
