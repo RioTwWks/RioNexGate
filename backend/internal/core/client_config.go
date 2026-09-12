@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"rionexgate/internal/config"
 	"rionexgate/internal/models"
@@ -130,18 +129,11 @@ var vlessLinkQueryKeys = []string{
 // vlessTransportParams derives transport metadata from a VLESS share link for RioNexTunnel.
 func vlessTransportParams(link string) map[string]string {
 	params := map[string]string{"type": "tcp", "security": "none"}
-	if !strings.HasPrefix(link, "vless://") {
+	u, err := url.Parse(link)
+	if err != nil || u.Scheme != "vless" {
 		return params
 	}
-	rest := strings.TrimPrefix(link, "vless://")
-	qIdx := strings.Index(rest, "?")
-	if qIdx < 0 {
-		return params
-	}
-	q, err := url.ParseQuery(rest[qIdx+1:])
-	if err != nil {
-		return params
-	}
+	q := u.Query()
 	for _, key := range vlessLinkQueryKeys {
 		if v := q.Get(key); v != "" {
 			params[key] = v
