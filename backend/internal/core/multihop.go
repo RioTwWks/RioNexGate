@@ -32,6 +32,14 @@ type MultihopData struct {
 	Routings  []MultihopRouting
 }
 
+// MultihopChainActive reports whether the user should use entry→exit chaining.
+// When true, XHTTP profiles are omitted from client-facing output: Vision/TCP matches
+// the RU→EU relay transport and works reliably in RioNexTunnel on mobile.
+func MultihopChainActive(multihop *config.MultihopConfig, exit *models.Node) bool {
+	return multihop != nil && multihop.IsEntryNode() && exit != nil &&
+		exit.Active && exit.Role == models.NodeRoleExit
+}
+
 // ResolveClientEndpoint returns the entry host/port for client links.
 // Exit nodes are never exposed to clients.
 func ResolveClientEndpoint(publicHost string, listenPort int, user models.User, entry *models.Node) ClientEndpoint {

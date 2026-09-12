@@ -12,7 +12,7 @@ func TestBuildSubscriptionBase64(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	links := BuildSubscriptionLinks("example.com", 443, user, nil, nil, nil)
+	links := BuildSubscriptionLinks("example.com", 443, user, nil, nil, nil, nil, nil)
 	if !strings.Contains(strings.Join(links, "\n"), "vless://") {
 		t.Fatalf("expected vless link in subscription")
 	}
@@ -23,7 +23,7 @@ func TestBuildClientConfigHash(t *testing.T) {
 		UUID:  "550e8400-e29b-41d4-a716-446655440000",
 		Email: "test@example.com",
 	}
-	cfg, err := BuildClientConfig("example.com", 443, user, 10808, nil, nil, nil)
+	cfg, err := BuildClientConfig("example.com", 443, user, 10808, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestVlessLinkPort(t *testing.T) {
 		t.Fatalf("expected 8443, got %d", p)
 	}
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil)
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestVlessLinkPort(t *testing.T) {
 
 func TestBuildClientConfigStealthProfiles(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil)
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestBuildClientConfigStealthProfiles(t *testing.T) {
 
 func TestBuildClientConfigStealthOmitsLegacyServers(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil)
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, testStealthConfig(), nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestVlessTransportParamsStripsFragmentWithEmail(t *testing.T) {
 	if params["security"] != "reality" || params["flow"] != "xtls-rprx-vision" {
 		t.Fatalf("unexpected reality params: %+v", params)
 	}
-	cfg, err := BuildClientConfig("rio2skadi.ru", 443, user, 10808, stealth, nil, nil)
+	cfg, err := BuildClientConfig("rio2skadi.ru", 443, user, 10808, stealth, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

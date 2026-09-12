@@ -176,7 +176,7 @@ func TestBuildVLESSTLSLink(t *testing.T) {
 func TestGetClientLinkProfiles(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
 	stealth := testStealthConfig()
-	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil)
+	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil)
 	if len(profiles) != 2 {
 		t.Fatalf("expected 2 profiles, got %d", len(profiles))
 	}
@@ -210,7 +210,7 @@ func TestGenerateStealthXrayConfigFragmentationOnTLS(t *testing.T) {
 
 func TestBuildSubscriptionStealthOmitsLegacyProtocols(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	links := BuildSubscriptionLinks("host.example", 443, user, testStealthConfig(), nil, nil)
+	links := BuildSubscriptionLinks("host.example", 443, user, testStealthConfig(), nil, nil, nil, nil)
 	joined := strings.Join(links, "\n")
 	if strings.Contains(joined, "vmess://") || strings.Contains(joined, "trojan://") {
 		t.Fatalf("stealth subscription must not include legacy vmess/trojan links: %s", joined)
@@ -237,7 +237,7 @@ func TestGetClientLinkPrefersVisionOverXHTTP(t *testing.T) {
 
 func TestEncodeSubscription(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil)
+	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil, nil, nil)
 	encoded := EncodeSubscription(profiles)
 	if encoded == "" {
 		t.Fatal("empty subscription")

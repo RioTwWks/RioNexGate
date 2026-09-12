@@ -1,9 +1,17 @@
 package core
-import ("encoding/base64"; "strings"; "rionexgate/internal/config"; "rionexgate/internal/models")
-func BuildSubscriptionLinks(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) []string {
+
+import (
+	"encoding/base64"
+	"strings"
+
+	"rionexgate/internal/config"
+	"rionexgate/internal/models"
+)
+
+func BuildSubscriptionLinks(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer) []string {
 	ep := ResolveClientEndpoint(host, port, user, entry)
 	links := []string{}
-	for _, p := range GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer) {
+	for _, p := range GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer, multihop, exit) {
 		if p.Link != "" {
 			links = append(links, p.Link)
 		}
@@ -22,11 +30,15 @@ func BuildSubscriptionLinks(host string, port int, user models.User, stealth *co
 	}
 	return links
 }
-func BuildSubscriptionBase64(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) string {
-	return base64.StdEncoding.EncodeToString([]byte(strings.Join(BuildSubscriptionLinks(host, port, user, stealth, entry, peer), "\n")))
+
+func BuildSubscriptionBase64(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer) string {
+	return base64.StdEncoding.EncodeToString([]byte(strings.Join(BuildSubscriptionLinks(host, port, user, stealth, entry, exit, multihop, peer), "\n")))
 }
-func BuildSubscriptionBase64Graceful(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, peer *models.WireGuardPeer) string {
-	links := BuildSubscriptionLinks(host, port, user, stealth, entry, peer)
-	if len(links) == 0 { links = []string{GetClientLink(host, port, user, "vless", stealth)} }
+
+func BuildSubscriptionBase64Graceful(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer) string {
+	links := BuildSubscriptionLinks(host, port, user, stealth, entry, exit, multihop, peer)
+	if len(links) == 0 {
+		links = []string{GetClientLink(host, port, user, "vless", stealth)}
+	}
 	return base64.StdEncoding.EncodeToString([]byte(strings.Join(links, "\n")))
 }
