@@ -15,7 +15,7 @@ func MaskToken(token string) string {
 
 func ClientRequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("X-Device-Token")
+		token := deviceTokenFromRequest(r)
 		userID := ""
 		if dc, ok := DeviceFromContext(r.Context()); ok && dc.User != nil {
 			userID = strconv.FormatUint(uint64(dc.User.ID), 10)
