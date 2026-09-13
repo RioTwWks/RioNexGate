@@ -166,7 +166,7 @@ func GetClientLink(host string, port int, user models.User, protocol string, ste
 }
 
 // GetClientLinkProfiles returns all available stealth profiles for a user.
-func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer) []LinkProfile {
+func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer, multihop *config.MultihopConfig, exit *models.Node) []LinkProfile {
 	if stealth == nil || (!stealth.IsActive() && !stealth.AWGActive()) {
 		return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}}
 	}
@@ -202,8 +202,30 @@ func GetClientLinkProfiles(host string, port int, user models.User, stealth *con
 		ini := BuildAWGClientConfig(host, &stealth.AWG, peer)
 		profiles = append(profiles, LinkProfile{Profile: "awg-udp-reserve", Transport: "awg", Priority: priority, Port: stealth.AWG.PortOrDefault(), Tags: "awg-reserve,udp", Link: BuildAWGURILink(ini), Config: ini})
 	}
-	if len(profiles) == 0 { return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}} }
-	return profiles
+	if len(profiles) == 0 {
+		return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}}
+	}
+	return omitXHTTPProfilesForMultihop(profiles, multihop, exit)
+}
+
+// omitXHTTPProfilesForMultihop removes XHTTP from client output when an entry→exit chain is active.
+// RioNexTunnel subscription mode remembers the last selected server; without this, users can stay
+// stuck on XHTTP which often fails to connect on mobile even though Vision/TCP works.
+func omitXHTTPProfilesForMultihop(profiles []LinkProfile, multihop *config.MultihopConfig, exit *models.Node) []LinkProfile {
+	if !MultihopChainActive(multihop, exit) {
+		return profiles
+	}
+	filtered := make([]LinkProfile, 0, len(profiles))
+	priority := 1
+	for _, p := range profiles {
+		if p.Transport == "xhttp" {
+			continue
+		}
+		p.Priority = priority
+		priority++
+		filtered = append(filtered, p)
+	}
+	return filtered
 }
 
 // FormatSubscriptionLinks joins profile links with newlines for base64 subscription encoding.

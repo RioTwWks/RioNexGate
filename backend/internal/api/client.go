@@ -156,6 +156,7 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, error) {
 	entry, _ := h.db.ResolveUserEntryNode(user)
+	exit, _ := h.db.ResolveUserExitNode(user)
 	var peer *models.WireGuardPeer
 	if h.cfg.Core.Stealth.AWGActive() {
 		peer, _ = h.db.EnsureWireGuardPeer(user.ID, h.cfg.Core.Stealth.AWG.SubnetOrDefault())
@@ -167,6 +168,8 @@ func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, erro
 		h.cfg.Server.ClientSOCKS5Port,
 		&h.cfg.Core.Stealth,
 		entry,
+		exit,
+		&h.cfg.Core.Multihop,
 		peer,
 	)
 }
@@ -277,6 +280,7 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entry, _ := h.db.ResolveUserEntryNode(user)
+	exit, _ := h.db.ResolveUserExitNode(user)
 	var peer *models.WireGuardPeer
 	if h.cfg.Core.Stealth.AWGActive() { peer, _ = h.db.EnsureWireGuardPeer(user.ID, h.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
 	payload := core.BuildSubscriptionBase64Graceful(
@@ -285,6 +289,8 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		*user,
 		&h.cfg.Core.Stealth,
 		entry,
+		exit,
+		&h.cfg.Core.Multihop,
 		peer,
 	)
 

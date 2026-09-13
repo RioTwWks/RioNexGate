@@ -156,9 +156,10 @@ func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
 		return nil, err
 	}
 	ep := m.clientEndpoint(*user)
+	exit, _ := m.db.ResolveUserExitNode(user)
 	var peer *models.WireGuardPeer
 	if m.cfg.Core.Stealth.AWGActive() { peer, _ = m.db.EnsureWireGuardPeer(user.ID, m.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
-	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer), nil
+	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer, &m.cfg.Core.Multihop, exit), nil
 }
 
 func (m *manager) getUserByID(userID string) (*models.User, error) {

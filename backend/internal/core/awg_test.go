@@ -16,12 +16,12 @@ func TestBuildAWGURILink(t *testing.T) {
 }
 func TestGetClientLinkProfilesWithAWG(t *testing.T) {
 	s := testStealthConfig(); s.AWG = *testAWGConfig()
-	p := GetClientLinkProfiles("h", 443, models.User{Email: "u"}, s, testAWGPeer())
+	p := GetClientLinkProfiles("h", 443, models.User{Email: "u"}, s, testAWGPeer(), nil, nil)
 	if len(p) != 3 || p[2].Transport != "awg" { t.Fatalf("%+v", p) }
 }
 func TestBuildSubscriptionWithAWG(t *testing.T) {
 	s := testStealthConfig(); s.AWG = *testAWGConfig()
-	for _, l := range BuildSubscriptionLinks("h", 443, models.User{Email: "u"}, s, nil, testAWGPeer()) {
+	for _, l := range BuildSubscriptionLinks("h", 443, models.User{Email: "u"}, s, nil, nil, nil, testAWGPeer()) {
 		if strings.HasPrefix(l, "awg://") { return }
 	}
 	t.Fatal("no awg line")

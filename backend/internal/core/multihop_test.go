@@ -199,7 +199,7 @@ func TestBuildSubscriptionUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry, nil)
+	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry, nil, nil, nil)
 	if len(links) == 0 {
 		t.Fatal("expected links")
 	}
@@ -217,11 +217,79 @@ func TestBuildClientConfigUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry, nil)
+	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(cfg.Servers) == 0 || cfg.Servers[0].Host != "entry.ru.example" {
 		t.Fatalf("expected entry host in config, got %+v", cfg.Servers)
+	}
+}
+
+func TestMultihopChainActive(t *testing.T) {
+	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+	if !MultihopChainActive(multihop, exit) {
+		t.Fatal("expected active multihop chain")
+	}
+	if MultihopChainActive(nil, exit) || MultihopChainActive(multihop, nil) {
+		t.Fatal("expected inactive without multihop config or exit node")
+	}
+	inactiveExit := &models.Node{Role: models.NodeRoleExit, Active: false}
+	if MultihopChainActive(multihop, inactiveExit) {
+		t.Fatal("inactive exit must not activate multihop chain filtering")
+	}
+}
+
+func TestGetClientLinkProfilesOmitsXHTTPForMultihop(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "test@test.test"}
+	stealth := testStealthConfig()
+	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+
+	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, multihop, exit)
+	if len(profiles) != 1 {
+		t.Fatalf("expected vision-only profile for multihop, got %d: %+v", len(profiles), profiles)
+	}
+	if profiles[0].Profile != "vision-tcp-primary" || profiles[0].Transport != "tcp" || profiles[0].Priority != 1 {
+		t.Fatalf("unexpected multihop profile: %+v", profiles[0])
+	}
+
+	withoutMultihop := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil)
+	if len(withoutMultihop) != 2 {
+		t.Fatalf("expected vision+xhttp without multihop, got %d", len(withoutMultihop))
+	}
+}
+
+func TestBuildSubscriptionOmitsXHTTPForMultihop(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "test@test.test"}
+	stealth := testStealthConfig()
+	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+
+	links := BuildSubscriptionLinks("host.example", 443, user, stealth, nil, exit, multihop, nil)
+	if len(links) != 1 {
+		t.Fatalf("expected 1 subscription link for multihop, got %d: %v", len(links), links)
+	}
+	if !strings.Contains(links[0], "xtls-rprx-vision") || strings.Contains(links[0], "type=xhttp") {
+		t.Fatalf("expected vision-only subscription link, got %s", links[0])
+	}
+}
+
+func TestBuildClientConfigOmitsXHTTPProfilesForMultihop(t *testing.T) {
+	user := models.User{UUID: "uuid-1", Email: "test@test.test"}
+	stealth := testStealthConfig()
+	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, stealth, nil, exit, multihop, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Profiles) != 1 || cfg.Profiles[0].Profile != "vision-tcp-primary" {
+		t.Fatalf("expected vision-only client config profiles, got %+v", cfg.Profiles)
+	}
+	if cfg.Servers[0].Params["type"] != "tcp" || cfg.Servers[0].Port != 8443 {
+		t.Fatalf("expected vision server params, got port=%d params=%+v", cfg.Servers[0].Port, cfg.Servers[0].Params)
 	}
 }
