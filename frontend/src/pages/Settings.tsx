@@ -44,7 +44,7 @@ export function Settings() {
       <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-md space-y-4">
         <div>
           <p className="text-slate-400 text-sm mb-2">Active core</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               disabled={loading}
               onClick={() => switchCore('xray')}
@@ -63,7 +63,22 @@ export function Settings() {
             >
               sing-box
             </button>
+            <button
+              disabled={loading}
+              onClick={() => switchCore('skadi')}
+              className={`px-4 py-2 rounded ${
+                coreType === 'skadi' ? 'bg-sky-600' : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+            >
+              SkadiCore
+            </button>
           </div>
+          {coreType === 'skadi' && (
+            <p className="text-slate-500 text-xs mt-2">
+              SkadiCore: single listen port (Reality ± XHTTP). Vision flow is not supported;
+              client links use TCP+Reality without xtls-rprx-vision.
+            </p>
+          )}
         </div>
         <button
           disabled={loading}

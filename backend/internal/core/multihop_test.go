@@ -199,7 +199,7 @@ func TestBuildSubscriptionUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry, nil, nil, nil)
+	links := BuildSubscriptionLinks("panel.local", 8080, user, nil, entry, nil, nil, nil, "xray")
 	if len(links) == 0 {
 		t.Fatal("expected links")
 	}
@@ -217,7 +217,7 @@ func TestBuildClientConfigUsesEntryNode(t *testing.T) {
 		Email: "test@example.com",
 	}
 	entry := &models.Node{Address: "entry.ru.example", Port: 443}
-	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry, nil, nil, nil)
+	cfg, err := BuildClientConfig("panel.local", 8080, user, 10808, nil, entry, nil, nil, nil, "xray")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func TestBuildSubscriptionOmitsXHTTPForMultihop(t *testing.T) {
 	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
 	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
 
-	links := BuildSubscriptionLinks("host.example", 443, user, stealth, nil, exit, multihop, nil)
+	links := BuildSubscriptionLinks("host.example", 443, user, stealth, nil, exit, multihop, nil, "xray")
 	if len(links) != 1 {
 		t.Fatalf("expected 1 subscription link for multihop, got %d: %v", len(links), links)
 	}
@@ -282,7 +282,7 @@ func TestBuildClientConfigOmitsXHTTPProfilesForMultihop(t *testing.T) {
 	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
 	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
 
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, stealth, nil, exit, multihop, nil)
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, stealth, nil, exit, multihop, nil, "xray")
 	if err != nil {
 		t.Fatal(err)
 	}

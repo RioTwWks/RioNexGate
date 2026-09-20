@@ -2,13 +2,13 @@
 
 # RioNexGate — панель управления прокси
 
-**RioNexGate** — панель для управления прокси на **Xray-core** и **sing-box**: Go API, React UI, Telegram-бот, Docker Compose.
+**RioNexGate** — панель для управления прокси на **Xray-core**, **sing-box** и **SkadiCore**: Go API, React UI, Telegram-бот, Docker Compose.
 
 Поддерживаются пользователи, VLESS/VMess/Trojan-ссылки, QR-коды, лимиты трафика, stealth-пресеты anti-DPI, мульти-хоп узлы и опциональный клиентский API для [RioNexTunnel](https://github.com/RioTwWks/RioNexTunnel) (устройства, подписка, телеметрия).
 
 ## Возможности
 
-- **Два ядра**: **xray** и **sing-box** (переключение в UI / API)
+- **Три ядра**: **xray**, **sing-box** и **SkadiCore** (переключение в UI / API)
 - **Пользователи**: CRUD, лимиты трафика и срока действия, ссылки и QR (VLESS, VMess, Trojan)
 - **Дашборд**: общая статистика трафика и графики
 - **Stealth / anti-DPI**: VLESS + Reality + XHTTP (`stream-one`), Vision (TCP), опциональный TLS, фрагментация ServerHello, резерв AmneziaWG — см. [docs/stealth.ru.md](docs/stealth.ru.md)
@@ -104,7 +104,7 @@ make dev-cores
 4. **Users** — создание, редактирование, ссылки, QR, устройства, привязка цепочки
 5. **Nodes** — entry/exit узлы, health check, топология мульти-хоп
 6. **Stealth** — настройки Reality/XHTTP/Vision/TLS/фрагментации/AWG
-7. **Settings** — переключение xray ↔ sing-box, reload ядра
+7. **Settings** — переключение xray ↔ sing-box ↔ SkadiCore, reload ядра
 
 При ошибке 401: нажмите **Logout** или очистите `localStorage` (`rionexgate_api_key`).
 
@@ -180,7 +180,9 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 | `make dev` | Сборка и запуск (`docker compose up --build`) |
 | `make up` | Запуск в фоне |
 | `make down` | Остановить контейнеры |
-| `make dev-cores` | Запустить xray-core и sing-box (profile `cores`) |
+| `make dev-cores` | Запустить xray-core (profile `cores`) |
+| `make dev-cores-singbox` | Запустить sing-box |
+| `make dev-cores-skadi` | Запустить SkadiCore ([RioTwWks/SkadiCore](https://github.com/RioTwWks/SkadiCore)) |
 | `make dev-local` | Подсказка для запуска без Docker |
 | `make migrate` | Миграция БД в контейнере backend |
 | `make docker-doctor` | Проверка Docker |
@@ -256,7 +258,7 @@ database:
   path: "./data/rionexgate.db"
 
 core:
-  type: "xray"                  # или "sing-box"
+  type: "xray"                  # или "sing-box" / "skadi"
   listen_port: 443
   public_host: "your.domain"    # для VLESS-ссылок
   stats_poll_seconds: 60
@@ -266,6 +268,11 @@ core:
   singbox:
     config_path: "./data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
+  skadi:
+    config_path: "./data/skadi/skadi.toml"
+    api_address: "127.0.0.1:10086"
+    api_token: "change-me-skadi-api-token"
+    metrics_address: "127.0.0.1:9091"
 
 telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"

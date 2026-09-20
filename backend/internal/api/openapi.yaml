@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: RioNexGate API
-  description: REST API for RioNexGate panel (Xray-core / sing-box management)
+  description: REST API for RioNexGate panel (Xray-core / sing-box / SkadiCore management)
   version: 1.0.0
 servers:
   - url: /api
@@ -441,7 +441,7 @@ paths:
                 properties:
                   type:
                     type: string
-                    enum: [xray, sing-box]
+                    enum: [xray, sing-box, skadi]
     put:
       summary: Switch core type
       tags: [Core]
@@ -455,7 +455,7 @@ paths:
               properties:
                 type:
                   type: string
-                  enum: [xray, sing-box]
+                  enum: [xray, sing-box, skadi]
       responses:
         "200":
           description: Core switched

@@ -35,6 +35,11 @@ core:
   singbox:
     config_path: "../e2e/data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
+  skadi:
+    config_path: "../e2e/data/skadi/skadi.toml"
+    api_address: "127.0.0.1:10086"
+    api_token: "e2e-skadi-token"
+    metrics_address: "127.0.0.1:9091"
 
 telegram:
   bot_token: ""

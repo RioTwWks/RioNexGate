@@ -171,6 +171,7 @@ func (h *Handler) buildClientConfig(user *models.User) (*core.ClientConfig, erro
 		exit,
 		&h.cfg.Core.Multihop,
 		peer,
+		h.cfg.Core.Type,
 	)
 }
 
@@ -292,6 +293,7 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		exit,
 		&h.cfg.Core.Multihop,
 		peer,
+		h.cfg.Core.Type,
 	)
 
 	if _, err := base64.StdEncoding.DecodeString(payload); err != nil {
