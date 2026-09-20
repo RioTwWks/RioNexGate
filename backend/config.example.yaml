@@ -6,7 +6,7 @@ database:
   path: "./data/rionexgate.db"
 
 core:
-  type: "xray"   # or "sing-box"
+  type: "xray"   # or "sing-box" / "skadi"
   listen_port: 443
   public_host: "proxy.example.com"    # host in VLESS links (domain or IP)
   stats_poll_seconds: 60
@@ -18,9 +18,18 @@ core:
     config_path: "./data/sing-box/config.json"
     binary_path: "/usr/local/bin/sing-box"
     api_address: "127.0.0.1:9090"
+  skadi:
+    config_path: "./data/skadi/skadi.toml"
+    binary_path: "/usr/local/bin/skadicore"
+    api_address: "127.0.0.1:10086"              # Skadi gRPC (loopback only)
+    api_token: "change-me-skadi-api-token"
+    metrics_address: "127.0.0.1:9091"            # optional Prometheus /healthz
 
   # Anti-DPI stealth presets (Reality + XHTTP / Vision / optional TLS).
-  # Generate keypair: xray x25519  (see README.md / README.ru.md and docs/stealth.md)
+  # Generate keypair: xray x25519  OR  skadicore genkey reality
+  # (see README.md / README.ru.md and docs/stealth.md)
+  # Note: SkadiCore uses a single listen port (XHTTP preferred) and does not
+  # support xtls-rprx-vision — panel emits TCP+Reality without Vision flow.
   stealth:
     enabled: true
     fingerprint: firefox            # firefox or edge recommended (not chrome/safari)

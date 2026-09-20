@@ -44,20 +44,25 @@ func (m *manager) Type() string {
 }
 
 func (m *manager) SetType(t string) error {
-	if t != "xray" && t != "sing-box" {
-		return fmt.Errorf("unsupported core type: %s", t)
+	normalized, err := NormalizeCoreType(t)
+	if err != nil {
+		return err
 	}
 	m.mu.Lock()
-	m.cfg.SetCoreType(t)
+	m.cfg.SetCoreType(normalized)
 	m.mu.Unlock()
 	return m.Reload()
 }
 
 func (m *manager) configPath() string {
-	if m.Type() == "sing-box" {
+	switch m.Type() {
+	case "sing-box":
 		return m.cfg.Core.Singbox.ConfigPath
+	case "skadi":
+		return m.cfg.Core.Skadi.ConfigPath
+	default:
+		return m.cfg.Core.Xray.ConfigPath
 	}
-	return m.cfg.Core.Xray.ConfigPath
 }
 
 func (m *manager) Reload() error {
@@ -83,9 +88,12 @@ func (m *manager) Reload() error {
 	var data []byte
 	listenPort := m.cfg.Core.ListenPort
 	stealth := &m.cfg.Core.Stealth
-	if m.Type() == "sing-box" {
+	switch m.Type() {
+	case "sing-box":
 		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users, stealth, multihop)
-	} else {
+	case "skadi":
+		data, err = generateSkadiConfig(listenPort, m.cfg.Core.Skadi, users, stealth)
+	default:
 		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users, stealth, multihop)
 	}
 	if err != nil {
@@ -146,6 +154,12 @@ func (m *manager) GetClientLink(userID string, protocol string) (string, error) 
 		return "", err
 	}
 	ep := m.clientEndpoint(*user)
+	if IsSkadiCore(m.Type()) && (protocol == "" || protocol == "vless") {
+		profiles := adaptProfilesForSkadi(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, nil)
+		if len(profiles) > 0 {
+			return profiles[0].Link, nil
+		}
+	}
 	link := GetClientLink(ep.Host, ep.Port, *user, protocol, &m.cfg.Core.Stealth)
 	return link, nil
 }
@@ -158,8 +172,14 @@ func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
 	ep := m.clientEndpoint(*user)
 	exit, _ := m.db.ResolveUserExitNode(user)
 	var peer *models.WireGuardPeer
-	if m.cfg.Core.Stealth.AWGActive() { peer, _ = m.db.EnsureWireGuardPeer(user.ID, m.cfg.Core.Stealth.AWG.SubnetOrDefault()) }
-	return GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer, &m.cfg.Core.Multihop, exit), nil
+	if m.cfg.Core.Stealth.AWGActive() {
+		peer, _ = m.db.EnsureWireGuardPeer(user.ID, m.cfg.Core.Stealth.AWG.SubnetOrDefault())
+	}
+	profiles := GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer, &m.cfg.Core.Multihop, exit)
+	if IsSkadiCore(m.Type()) {
+		return adaptProfilesForSkadi(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, profiles), nil
+	}
+	return profiles, nil
 }
 
 func (m *manager) getUserByID(userID string) (*models.User, error) {

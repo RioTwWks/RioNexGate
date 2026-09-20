@@ -49,12 +49,21 @@ type ClientConfig struct {
 	DNS        ClientDNS      `json:"dns"`
 }
 
-func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer) (*ClientConfig, error) {
+func BuildClientConfig(host string, port int, user models.User, socksPort int, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) (*ClientConfig, error) {
 	ep := ResolveClientEndpoint(host, port, user, entry)
 	protocols := ClientConfigProtocols(stealth)
+	if IsSkadiCore(coreType) {
+		protocols = []string{"vless"}
+	}
 	servers := make([]ClientServer, 0, len(protocols))
 	for _, proto := range protocols {
 		link := GetClientLink(ep.Host, ep.Port, user, proto, stealth)
+		if IsSkadiCore(coreType) && proto == "vless" {
+			profiles := adaptProfilesForSkadi(ep.Host, ep.Port, user, stealth, nil)
+			if len(profiles) > 0 {
+				link = profiles[0].Link
+			}
+		}
 		srvPort := ep.Port
 		if proto == "vless" {
 			srvPort = vlessLinkPort(link, ep.Port)
@@ -83,6 +92,9 @@ func BuildClientConfig(host string, port int, user models.User, socksPort int, s
 	}
 
 	profiles := GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer, multihop, exit)
+	if IsSkadiCore(coreType) {
+		profiles = adaptProfilesForSkadi(ep.Host, ep.Port, user, stealth, profiles)
+	}
 
 	body := ClientConfigBody{
 		Servers:  servers,

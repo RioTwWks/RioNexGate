@@ -32,6 +32,7 @@ type CoreConfig struct {
 	PublicHost string         `mapstructure:"public_host"`
 	Xray       XrayConfig     `mapstructure:"xray"`
 	Singbox    SingboxConfig  `mapstructure:"singbox"`
+	Skadi      SkadiConfig    `mapstructure:"skadi"`
 	Stealth    StealthConfig  `mapstructure:"stealth"`
 	Multihop   MultihopConfig `mapstructure:"multihop"`
 	StatsPoll  int            `mapstructure:"stats_poll_seconds"`
@@ -57,6 +58,15 @@ type SingboxConfig struct {
 	ConfigPath string `mapstructure:"config_path"`
 	BinaryPath string `mapstructure:"binary_path"`
 	APIAddress string `mapstructure:"api_address"`
+}
+
+// SkadiConfig holds paths and API settings for SkadiCore (https://github.com/RioTwWks/SkadiCore).
+type SkadiConfig struct {
+	ConfigPath     string `mapstructure:"config_path"`
+	BinaryPath     string `mapstructure:"binary_path"`
+	APIAddress     string `mapstructure:"api_address"`
+	APIToken       string `mapstructure:"api_token"`
+	MetricsAddress string `mapstructure:"metrics_address"`
 }
 
 // StealthConfig holds anti-DPI transport presets (Reality + XHTTP / Vision / TLS).

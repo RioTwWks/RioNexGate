@@ -1,0 +1,31 @@
+# SkadiCore runtime image: download musl release binary + config watcher.
+# https://github.com/RioTwWks/SkadiCore
+ARG SKADI_VERSION=0.1.2
+ARG TARGETARCH=amd64
+
+FROM alpine:3.20 AS downloader
+ARG SKADI_VERSION
+ARG TARGETARCH
+RUN apk add --no-cache curl ca-certificates tar \
+ && case "${TARGETARCH}" in \
+      amd64|x86_64) ARCH=x86_64 ;; \
+      arm64|aarch64) ARCH=aarch64 ;; \
+      *) echo "unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL -o /tmp/skadi.tar.gz \
+      "https://github.com/RioTwWks/SkadiCore/releases/download/v${SKADI_VERSION}/skadicore-${SKADI_VERSION}-${ARCH}-unknown-linux-musl.tar.gz" \
+ && tar -xzf /tmp/skadi.tar.gz -C /tmp \
+ && mv /tmp/skadicore /skadicore \
+ && chmod +x /skadicore
+
+FROM alpine:3.20
+# Root is required for network_mode: host bind on port 443 (same as xray-core).
+RUN apk add --no-cache ca-certificates
+COPY --from=downloader /skadicore /skadicore
+COPY scripts/skadi-run.sh /usr/local/bin/skadi-run.sh
+RUN chmod +x /usr/local/bin/skadi-run.sh /skadicore
+
+ENV SKADICORE_BIN=/skadicore
+EXPOSE 443
+ENTRYPOINT ["/usr/local/bin/skadi-run.sh"]
+CMD ["--config", "/config/skadi.toml"]

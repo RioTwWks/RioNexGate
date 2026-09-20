@@ -2,12 +2,12 @@
 ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 DOCKER_COMPOSE := $(ROOT)scripts/docker-compose.sh
 
-.PHONY: build up down dev dev-cores dev-local docker-doctor test clean migrate init logs docker-check
+.PHONY: build up down dev dev-cores dev-cores-singbox dev-cores-skadi dev-local docker-doctor test clean migrate init logs docker-check
 
 init:
 	cp -n backend/config.example.yaml backend/config.yaml 2>/dev/null || true
 	cp -n .env.example .env 2>/dev/null || true
-	mkdir -p data/xray data/sing-box data/awg data/nginx/ssl backups
+	mkdir -p data/xray data/sing-box data/skadi data/awg data/nginx/ssl backups
 	@echo "Panel URL after make dev: http://localhost:$${HTTP_PORT:-8888}"
 
 docker-check:
@@ -33,6 +33,9 @@ dev-cores: docker-check
 
 dev-cores-singbox: docker-check
 	$(DOCKER_COMPOSE) --profile cores up -d sing-box
+
+dev-cores-skadi: docker-check
+	$(DOCKER_COMPOSE) --profile cores up -d --build skadi-core
 
 dev-local:
 	@echo "Local development without Docker:"

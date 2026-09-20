@@ -210,7 +210,7 @@ func TestGenerateStealthXrayConfigFragmentationOnTLS(t *testing.T) {
 
 func TestBuildSubscriptionStealthOmitsLegacyProtocols(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	links := BuildSubscriptionLinks("host.example", 443, user, testStealthConfig(), nil, nil, nil, nil)
+	links := BuildSubscriptionLinks("host.example", 443, user, testStealthConfig(), nil, nil, nil, nil, "xray")
 	joined := strings.Join(links, "\n")
 	if strings.Contains(joined, "vmess://") || strings.Contains(joined, "trojan://") {
 		t.Fatalf("stealth subscription must not include legacy vmess/trojan links: %s", joined)

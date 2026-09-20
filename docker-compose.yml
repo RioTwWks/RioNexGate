@@ -89,6 +89,24 @@ services:
     restart: unless-stopped
     network_mode: host
 
+  skadi-core:
+    profiles: ["cores"]
+    build:
+      context: .
+      dockerfile: Dockerfile.skadi
+      args:
+        SKADI_VERSION: ${SKADI_VERSION:-0.1.2}
+    image: rionexgate-skadi:${SKADI_VERSION:-0.1.2}
+    pull_policy: if_not_present
+    volumes:
+      - ./data/skadi:/config
+    environment:
+      - SKADICORE_BIN=/skadicore
+    restart: unless-stopped
+    network_mode: host
+    # Binds Skadi listen port from generated skadi.toml (usually 443 with Reality+XHTTP).
+    # Requires core.type: skadi and core.stealth Reality keys in config.yaml.
+
   amneziawg:
     profiles: ["awg"]
     image: amneziavpn/amneziawg-go:latest

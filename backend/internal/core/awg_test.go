@@ -21,7 +21,7 @@ func TestGetClientLinkProfilesWithAWG(t *testing.T) {
 }
 func TestBuildSubscriptionWithAWG(t *testing.T) {
 	s := testStealthConfig(); s.AWG = *testAWGConfig()
-	for _, l := range BuildSubscriptionLinks("h", 443, models.User{Email: "u"}, s, nil, nil, nil, testAWGPeer()) {
+	for _, l := range BuildSubscriptionLinks("h", 443, models.User{Email: "u"}, s, nil, nil, nil, testAWGPeer(), "xray") {
 		if strings.HasPrefix(l, "awg://") { return }
 	}
 	t.Fatal("no awg line")
