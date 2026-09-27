@@ -95,8 +95,8 @@ services:
       context: .
       dockerfile: Dockerfile.skadi
       args:
-        SKADI_VERSION: ${SKADI_VERSION:-0.1.2}
-    image: rionexgate-skadi:${SKADI_VERSION:-0.1.2}
+        SKADI_VERSION: ${SKADI_VERSION:-0.1.3}
+    image: rionexgate-skadi:${SKADI_VERSION:-0.1.3}
     pull_policy: if_not_present
     volumes:
       - ./data/skadi:/config
