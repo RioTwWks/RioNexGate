@@ -45,4 +45,18 @@ When `core.type` is `skadi`, subscription / RioNexTunnel profiles are:
 
 ## Version pin
 
-`SKADI_VERSION` in `.env` / `.env.example` (default `0.1.3`) selects the GitHub Release used by `Dockerfile.skadi`.
+`SKADI_VERSION` in `.env` / `.env.example` (default **`0.1.3`**, latest stable as of 2026-09-27) selects the GitHub Release used by `Dockerfile.skadi`.
+
+Upstream release: [SkadiCore v0.1.3](https://github.com/RioTwWks/SkadiCore/releases/tag/v0.1.3) (rustls REALITY 0.23.45, dual-stack `listen`, stricter REALITY key validation, SSRF hardening on outbound).
+
+## Config validation
+
+Generated `skadi.toml` matches SkadiCore server schema (`[server]`, `[protocol.vless]`, `[transport.reality]`, optional `[transport.xhttp]`, `[api]`, `[metrics]`).
+
+Backend test `TestSkadiConfigValidate` runs `skadicore check-config` when a binary is available:
+
+```bash
+export SKADICORE_BIN=/path/to/skadicore   # optional
+export RUN_SKADI_TEST=1
+cd backend && CGO_ENABLED=1 go test ./internal/core/ -run TestSkadiConfigValidate -v
+```
