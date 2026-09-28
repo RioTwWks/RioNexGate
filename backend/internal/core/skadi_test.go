@@ -1,6 +1,9 @@
 package core
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -126,6 +129,62 @@ func TestSkadiAPIListenAddress(t *testing.T) {
 	}
 	if got := skadiAPIListenAddress("127.0.0.1:10086"); got != "127.0.0.1:10086" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+// testStealthConfigSkadiValid uses REALITY keys that pass skadicore check-config (v0.1.3+).
+func testStealthConfigSkadiValid() *config.StealthConfig {
+	s := testStealthConfig()
+	s.Reality.PrivateKey = "l8KJbSSnlO29SIz+rkfBWiI04ax+pMrvKT10LezmIDA="
+	s.Reality.PublicKey = "mTQRWF244Qsvn9UuDjOBlVPBTYZIWOUx6LwS3OeM93I"
+	s.Reality.ShortIDs = []string{"86c10d238f7ac5c0"}
+	return s
+}
+
+func skadicoreBinary() string {
+	if p := strings.TrimSpace(os.Getenv("SKADICORE_BIN")); p != "" {
+		return p
+	}
+	p, err := exec.LookPath("skadicore")
+	if err != nil {
+		return ""
+	}
+	return p
+}
+
+func TestSkadiConfigValidate(t *testing.T) {
+	if os.Getenv("CI") == "" && os.Getenv("RUN_SKADI_TEST") == "" {
+		t.Skip("set RUN_SKADI_TEST=1 or run in CI to validate with skadicore binary")
+	}
+	bin := skadicoreBinary()
+	if bin == "" {
+		t.Skip("skadicore binary not in PATH (set SKADICORE_BIN)")
+	}
+
+	users := []models.User{{UUID: "b831381d-6324-4d53-ad4f-8cda48b30811", Email: "test@example.com"}}
+	cfg := config.SkadiConfig{
+		APIAddress:     "127.0.0.1:10086",
+		APIToken:       "integration-test-token",
+		MetricsAddress: "127.0.0.1:9091",
+	}
+	data, err := generateSkadiConfig(443, cfg, users, testStealthConfigSkadiValid())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "skadi.toml")
+	if err := os.WriteFile(cfgPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "check-config", "--config", cfgPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("skadicore check-config failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "Configuration OK") {
+		t.Fatalf("unexpected check-config output:\n%s", out)
 	}
 }
 
