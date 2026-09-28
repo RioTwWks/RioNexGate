@@ -45,4 +45,4 @@ When `core.type` is `skadi`, subscription / RioNexTunnel profiles are:
 
 ## Version pin
 
-`SKADI_VERSION` in `.env` / `.env.example` (default `0.1.2`) selects the GitHub Release used by `Dockerfile.skadi`.
+`SKADI_VERSION` in `.env` / `.env.example` (default `0.1.3`) selects the GitHub Release used by `Dockerfile.skadi`.

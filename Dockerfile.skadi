@@ -1,6 +1,6 @@
 # SkadiCore runtime image: download musl release binary + config watcher.
 # https://github.com/RioTwWks/SkadiCore
-ARG SKADI_VERSION=0.1.2
+ARG SKADI_VERSION=0.1.3
 ARG TARGETARCH=amd64
 
 FROM alpine:3.20 AS downloader
