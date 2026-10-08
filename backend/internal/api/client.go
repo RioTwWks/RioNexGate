@@ -26,9 +26,10 @@ type ClientMetrics struct {
 }
 
 type RegisterRequest struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	Label  string `json:"label"`
+	UserID      uint   `json:"user_id"`
+	Email       string `json:"email"`
+	Label       string `json:"label"`
+	InviteToken string `json:"invite_token"`
 }
 
 type RegisterResponse struct {
@@ -67,22 +68,64 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	inviteTok := strings.TrimSpace(r.Header.Get("X-Invite-Token"))
+	if inviteTok == "" {
+		inviteTok = strings.TrimSpace(req.InviteToken)
+	}
+
+	auth, ok := middleware.RegisterAuthFromContext(r.Context())
+	if !ok || (auth.Mode != "invite" && inviteTok != "") {
+		// Resolve again so invite_token from JSON body is accepted.
+		auth = middleware.ResolveRegisterAuth(h.cfg, h.db,
+			r.Header.Get("X-API-Key"),
+			r.Header.Get("X-Registration-Secret"),
+			inviteTok,
+		)
+	}
+	if auth == nil {
+		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	var userID uint
-	switch {
-	case req.UserID > 0:
-		userID = req.UserID
-	case req.Email != "":
-		user, err := h.db.GetUserByEmail(req.Email)
-		if err != nil {
+	label := req.Label
+	switch auth.Mode {
+	case "invite":
+		userID = auth.Invite.UserID
+		if label == "" {
+			label = auth.Invite.Label
+		}
+		if req.UserID > 0 && req.UserID != userID {
 			atomic.AddInt64(&h.metrics.RegistrationFails, 1)
-			writeError(w, http.StatusNotFound, "user not found")
+			writeError(w, http.StatusForbidden, "invite does not match user_id")
 			return
 		}
-		userID = user.ID
+		if req.Email != "" {
+			u, err := h.db.GetUserByEmail(req.Email)
+			if err != nil || u.ID != userID {
+				atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+				writeError(w, http.StatusForbidden, "invite does not match email")
+				return
+			}
+		}
 	default:
-		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
-		writeError(w, http.StatusBadRequest, "user_id or email is required")
-		return
+		switch {
+		case req.UserID > 0:
+			userID = req.UserID
+		case req.Email != "":
+			user, err := h.db.GetUserByEmail(req.Email)
+			if err != nil {
+				atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+				writeError(w, http.StatusNotFound, "user not found")
+				return
+			}
+			userID = user.ID
+		default:
+			atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+			writeError(w, http.StatusBadRequest, "user_id or email is required")
+			return
+		}
 	}
 
 	user, err := h.db.GetUser(userID)
@@ -110,11 +153,20 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, err := h.db.CreateDevice(user.ID, req.Label)
+	device, err := h.db.CreateDevice(user.ID, label)
 	if err != nil {
 		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	if auth.Mode == "invite" {
+		if _, err := h.db.ConsumeInvite(auth.Invite.Token); err != nil {
+			_ = h.db.DeleteDevice(device.Token)
+			atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+			writeError(w, http.StatusForbidden, "invite not usable")
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusCreated, RegisterResponse{

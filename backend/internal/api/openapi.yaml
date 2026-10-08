@@ -132,6 +132,53 @@ paths:
       responses:
         "204":
           description: Deleted
+  /users/{id}/invites:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      summary: List device registration invites for a user
+      tags: [Users]
+      responses:
+        "200":
+          description: Invite list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invite"
+    post:
+      summary: Create a registration invite
+      description: Clients register with `X-Invite-Token` or body `invite_token` (no admin API key needed).
+      tags: [Users]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInviteRequest"
+      responses:
+        "201":
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invite"
+  /users/{id}/invites/{inviteId}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      summary: Revoke a registration invite
+      tags: [Users]
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          $ref: "#/components/responses/NotFound"
   /users/{id}/link:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -189,12 +236,23 @@ paths:
     post:
       summary: Register a RioNexTunnel device
       description: |
-        Requires `X-API-Key` or `X-Registration-Secret` (when `server.registration_secret` is set).
+        Requires one of:
+        - `X-API-Key`
+        - `X-Registration-Secret` (when `server.registration_secret` is set)
+        - per-user invite via `X-Invite-Token` or body `invite_token`
         Unauthenticated registration is disabled unless `server.allow_open_register: true`.
+        With an invite, `user_id`/`email` are optional (taken from the invite).
       security:
         - ApiKeyAuth: []
         - RegistrationSecretAuth: []
+        - InviteTokenAuth: []
       tags: [RioNexTunnel]
+      parameters:
+        - name: X-Invite-Token
+          in: header
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -479,6 +537,11 @@ components:
       in: header
       name: X-Registration-Secret
       description: Optional client registration secret (`server.registration_secret`)
+    InviteTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Invite-Token
+      description: Per-user one-time (or limited-use) invite from POST /users/{id}/invites
     DeviceTokenAuth:
       type: apiKey
       in: header
@@ -692,6 +755,9 @@ components:
           type: string
         label:
           type: string
+        invite_token:
+          type: string
+          description: Per-user invite from POST /users/{id}/invites (alternative to X-Invite-Token)
     RegisterDeviceResponse:
       type: object
       properties:
@@ -699,6 +765,46 @@ components:
           type: string
         subscription_url:
           type: string
+    CreateInviteRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          description: Default device label when registering
+        max_uses:
+          type: integer
+          default: 1
+        expires_hours:
+          type: integer
+          description: 0 or omitted means no expiry
+    Invite:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        token:
+          type: string
+        label:
+          type: string
+        max_uses:
+          type: integer
+        used_count:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        usable:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
     ClientConfig:
       type: object
       properties:

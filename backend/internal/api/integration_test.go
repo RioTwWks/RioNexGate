@@ -380,3 +380,74 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 		t.Fatalf("commands sse: missing event, body=%s", sseBody)
 	}
 }
+
+func TestInviteTokenRegistration(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("sqlite requires CGO")
+	}
+	srv, _ := setupTestServer(t)
+	defer srv.Close()
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	base := srv.URL + "/api"
+
+	body := []byte(`{"email":"invitee@example.com","traffic_gb":5,"expire_days":14}`)
+	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-secret-key16")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var user struct {
+		ID uint `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	invBody := []byte(`{"label":"laptop","max_uses":1,"expires_hours":24}`)
+	req, _ = http.NewRequest(http.MethodPost, base+"/users/"+strconv.FormatUint(uint64(user.ID), 10)+"/invites", bytes.NewReader(invBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-secret-key16")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create invite: %d", resp.StatusCode)
+	}
+	var inv struct {
+		Token string `json:"token"`
+		ID    uint   `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&inv); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	regBody := []byte(`{"invite_token":"` + inv.Token + `","label":"from-invite"}`)
+	req, _ = http.NewRequest(http.MethodPost, base+"/client/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("register with invite: expected 201, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Second use must fail (max_uses=1).
+	req, _ = http.NewRequest(http.MethodPost, base+"/client/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode == http.StatusCreated {
+		t.Fatal("expected invite reuse to fail")
+	}
+	resp.Body.Close()
+}

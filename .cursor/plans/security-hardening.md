@@ -22,7 +22,7 @@ flowchart TD
 | **P0** | Закрыть угон доступа и утечку секретов в дефолте | сделано |
 | **P1** | Enforce лимитов, SSRF/injection, nginx | сделано |
 | **P2** | Контейнеры, CORS, deps, бэкапы | сделано |
-| **P3** | Invite-токены, ротация ключей, OpenAPI auth | бэклог |
+| **P3** | Invite-токены, ротация ключей, OpenAPI auth | частично (invites) |
 
 ---
 
@@ -99,7 +99,7 @@ flowchart TD
 
 ## P3 — Ops / продукт (бэклог)
 
-- [ ] Per-user invite / one-time registration tokens
+- [x] Per-user invite / one-time registration tokens (`/users/{id}/invites`, `invite_token`)
 - [ ] Ротация API key из UI
 - [ ] Подписка: короткий TTL / signed URL (уже есть token URL — усилить)
 - [ ] Авто-отключение по трафику (quota уже режет доступ; UI/auto `active=false` — отдельно)

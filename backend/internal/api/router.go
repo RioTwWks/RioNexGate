@@ -23,7 +23,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   corsOrigins(cfg),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key", "X-Device-Token", "X-Registration-Secret", "X-API-Version"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key", "X-Device-Token", "X-Registration-Secret", "X-Invite-Token", "X-API-Version"},
 		ExposedHeaders:   []string{"X-API-Version", "X-Config-Cached"},
 		AllowCredentials: false,
 	}))
@@ -37,7 +37,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 		r.Get("/subscription/{token}", h.GetSubscription)
 
 		r.Route("/client", func(r chi.Router) {
-			r.With(middleware.ClientRegisterAuth(cfg)).Post("/register", h.RegisterClient)
+			r.With(middleware.ClientRegisterAuth(cfg, database)).Post("/register", h.RegisterClient)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.DeviceTokenAuth(database))
 				r.Use(middleware.ClientRequestLogger)
@@ -60,6 +60,9 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 			r.Get("/users/{id}/qr", h.GetUserQR)
 			r.Get("/users/{id}/devices", h.ListUserDevices)
 			r.Delete("/users/{id}/devices/{deviceId}", h.RevokeUserDevice)
+			r.Get("/users/{id}/invites", h.ListUserInvites)
+			r.Post("/users/{id}/invites", h.CreateUserInvite)
+			r.Delete("/users/{id}/invites/{inviteId}", h.RevokeUserInvite)
 			r.Put("/users/{id}/chain", h.UpdateUserChain)
 			r.Get("/nodes", h.ListNodes)
 			r.Post("/nodes", h.CreateNode)
