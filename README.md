@@ -116,7 +116,8 @@ In the link modal you can choose **VLESS**, **VMess**, or **Trojan**. With steal
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/client/register` | `X-API-Key` or `X-Registration-Secret` | Register device → `device_token`, `subscription_url` |
+| `POST /api/client/register` | `X-API-Key`, `X-Registration-Secret`, or invite (`X-Invite-Token` / `invite_token`) | Register device → `device_token`, `subscription_url` |
+| `POST /api/users/{id}/invites` | `X-API-Key` | Create limited-use device invite for a user |
 | `GET /api/client/config` | `X-Device-Token` | JSON config with `config_hash` and transport profiles |
 | `POST /api/client/stats` | `X-Device-Token` | Session telemetry |
 | `GET /api/client/commands` | `X-Device-Token` | Long-poll or SSE (`?stream=sse`) for `refresh_config` etc. |
@@ -127,11 +128,19 @@ In the link modal you can choose **VLESS**, **VMess**, or **Trojan**. With steal
 Example registration:
 
 ```bash
+# Admin register:
 curl -X POST http://localhost:8888/api/client/register \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{"email":"user@example.com","label":"laptop"}'
-# or: -H "X-Registration-Secret: $REG_SECRET"  (server.registration_secret)
+
+# Per-user invite (create in panel or API, then):
+curl -X POST http://localhost:8888/api/users/1/invites \
+  -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+  -d '{"label":"phone","max_uses":1,"expires_hours":72}'
+curl -X POST http://localhost:8888/api/client/register \
+  -H "Content-Type: application/json" \
+  -d '{"invite_token":"…","label":"phone"}'
 ```
 
 ## Stealth / anti-DPI (Reality + XHTTP)

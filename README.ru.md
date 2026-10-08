@@ -116,7 +116,8 @@ make dev-cores
 
 | Эндпоинт | Аутентификация | Описание |
 |----------|----------------|----------|
-| `POST /api/client/register` | `X-API-Key` или `X-Registration-Secret` | Регистрация устройства → `device_token`, `subscription_url` |
+| `POST /api/client/register` | `X-API-Key`, `X-Registration-Secret` или invite (`X-Invite-Token` / `invite_token`) | Регистрация устройства → `device_token`, `subscription_url` |
+| `POST /api/users/{id}/invites` | `X-API-Key` | Invite для регистрации устройства пользователя |
 | `GET /api/client/config` | `X-Device-Token` | JSON-конфиг с `config_hash` и транспортными профилями |
 | `POST /api/client/stats` | `X-Device-Token` | Телеметрия сессии |
 | `GET /api/client/commands` | `X-Device-Token` | Long-poll или SSE (`?stream=sse`) для `refresh_config` и др. |
@@ -127,11 +128,19 @@ make dev-cores
 Пример регистрации:
 
 ```bash
+# Админская регистрация:
 curl -X POST http://localhost:8888/api/client/register \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{"email":"user@example.com","label":"laptop"}'
-# или: -H "X-Registration-Secret: $REG_SECRET"  (server.registration_secret)
+
+# Invite на пользователя (панель или API), затем:
+curl -X POST http://localhost:8888/api/users/1/invites \
+  -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+  -d '{"label":"phone","max_uses":1,"expires_hours":72}'
+curl -X POST http://localhost:8888/api/client/register \
+  -H "Content-Type: application/json" \
+  -d '{"invite_token":"…","label":"phone"}'
 ```
 
 ## Stealth / Anti-DPI (Reality + XHTTP)

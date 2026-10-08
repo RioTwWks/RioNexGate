@@ -35,6 +35,7 @@ func (d *DB) AutoMigrate() error {
 		&models.Traffic{},
 		&models.Node{},
 		&models.Device{},
+		&models.Invite{},
 		&models.ClientStatsReport{},
 		&models.WireGuardPeer{},
 	); err != nil {

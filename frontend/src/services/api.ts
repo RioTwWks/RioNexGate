@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Device } from '../types/device';
+import type { CreateInviteInput, Invite } from '../types/invite';
 import type { CreateNodeInput, Node, NodeHealthResult, UpdateNodeInput } from '../types/node';
 import type { DestTestResult, ProfileLink, StealthSettings } from '../types/stealth';
 import type { User } from '../types/user';
@@ -61,6 +62,20 @@ export async function getUserDevices(userId: number): Promise<Device[]> {
 
 export async function revokeDevice(userId: number, deviceId: number): Promise<void> {
   await api.delete(`/users/${userId}/devices/${deviceId}`);
+}
+
+export async function getUserInvites(userId: number): Promise<Invite[]> {
+  const res = await api.get<Invite[]>(`/users/${userId}/invites`);
+  return res.data;
+}
+
+export async function createUserInvite(userId: number, input: CreateInviteInput = {}): Promise<Invite> {
+  const res = await api.post<Invite>(`/users/${userId}/invites`, input);
+  return res.data;
+}
+
+export async function revokeUserInvite(userId: number, inviteId: number): Promise<void> {
+  await api.delete(`/users/${userId}/invites/${inviteId}`);
 }
 
 export async function getUserProfiles(userId: number): Promise<ProfileLink[]> {

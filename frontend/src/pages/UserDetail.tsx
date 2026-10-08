@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  createUserInvite,
   getUser,
   getUserDevices,
+  getUserInvites,
   getUserProfiles,
   revokeDevice,
+  revokeUserInvite,
 } from '../services/api';
 import { SyncStatusBadge } from '../components/SyncStatusBadge';
 import { UserChainSection } from '../components/UserChainSection';
 import { PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { Device } from '../types/device';
 import { getSyncStatus } from '../types/device';
+import type { Invite } from '../types/invite';
 import type { ProfileLink } from '../types/stealth';
 import type { User } from '../types/user';
 
@@ -26,24 +30,30 @@ function maskToken(token: string): string {
 export function UserDetail({ userId }: Props) {
   const [user, setUser] = useState<User | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [profiles, setProfiles] = useState<ProfileLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedProfile, setCopiedProfile] = useState<string | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [freshInvite, setFreshInvite] = useState<Invite | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [userData, deviceData, profileData] = await Promise.all([
+      const [userData, deviceData, inviteData, profileData] = await Promise.all([
         getUser(userId),
         getUserDevices(userId).catch(() => [] as Device[]),
+        getUserInvites(userId).catch(() => [] as Invite[]),
         getUserProfiles(userId).catch(() => [] as ProfileLink[]),
       ]);
       setUser(userData);
       setDevices(deviceData);
+      setInvites(inviteData);
       setProfiles(profileData);
     } catch {
       setError('Failed to load user details');
@@ -74,6 +84,41 @@ export function UserDetail({ userId }: Props) {
     } finally {
       setRevoking(null);
     }
+  };
+
+  const handleCreateInvite = async () => {
+    setCreatingInvite(true);
+    setError('');
+    try {
+      const inv = await createUserInvite(userId, {
+        label: 'device',
+        max_uses: 1,
+        expires_hours: 72,
+      });
+      setFreshInvite(inv);
+      await load();
+    } catch {
+      setError('Failed to create invite');
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const handleRevokeInvite = async (inviteId: number) => {
+    if (!confirm('Revoke this invite? It can no longer be used to register a device.')) return;
+    try {
+      await revokeUserInvite(userId, inviteId);
+      if (freshInvite?.id === inviteId) setFreshInvite(null);
+      await load();
+    } catch {
+      setError('Failed to revoke invite');
+    }
+  };
+
+  const copyInviteToken = async (token: string) => {
+    await navigator.clipboard.writeText(token);
+    setCopiedInvite(token);
+    setTimeout(() => setCopiedInvite(null), 2000);
   };
 
   const copyProfileLink = async (id: string, link: string) => {
@@ -161,6 +206,98 @@ export function UserDetail({ userId }: Props) {
           <p className="text-slate-500 text-sm">
             Subscription URL not available yet. Backend may still be provisioning the token.
           </p>
+        )}
+      </section>
+
+      <section className="card-pad">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 className="text-lg font-medium">Device invites</h2>
+          <button
+            type="button"
+            onClick={handleCreateInvite}
+            disabled={creatingInvite}
+            className="btn-primary"
+            data-testid="create-invite"
+          >
+            {creatingInvite ? 'Creating…' : 'Create invite'}
+          </button>
+        </div>
+        <p className="text-slate-500 text-sm mb-3">
+          Share an invite token with RioNexTunnel. Register with header{' '}
+          <code className="text-xs">X-Invite-Token</code> or JSON field{' '}
+          <code className="text-xs">invite_token</code> (no admin API key).
+        </p>
+        {freshInvite && (
+          <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3" data-testid="fresh-invite">
+            <p className="text-sm text-emerald-300 mb-2">New invite created — copy now:</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input readOnly value={freshInvite.token} className="input font-mono text-xs" />
+              <button
+                type="button"
+                onClick={() => copyInviteToken(freshInvite.token)}
+                className="btn-primary whitespace-nowrap"
+              >
+                {copiedInvite === freshInvite.token ? 'Copied!' : 'Copy token'}
+              </button>
+            </div>
+          </div>
+        )}
+        {invites.length === 0 ? (
+          <p className="text-slate-500 text-sm">No invites yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Token</th>
+                  <th>Uses</th>
+                  <th>Expires</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invites.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="font-mono text-xs">{maskToken(inv.token)}</td>
+                    <td>
+                      {inv.used_count}/{inv.max_uses}
+                    </td>
+                    <td>
+                      {inv.expires_at ? new Date(inv.expires_at).toLocaleString() : 'Never'}
+                    </td>
+                    <td>
+                      {inv.usable ? (
+                        <span className="badge-info">usable</span>
+                      ) : (
+                        <span className="badge-neutral">spent</span>
+                      )}
+                    </td>
+                    <td className="text-right space-x-2">
+                      {inv.usable && (
+                        <button
+                          type="button"
+                          onClick={() => copyInviteToken(inv.token)}
+                          className="link-action text-sm"
+                        >
+                          {copiedInvite === inv.token ? 'Copied!' : 'Copy'}
+                        </button>
+                      )}
+                      {inv.usable && (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeInvite(inv.id)}
+                          className="text-red-400 hover:underline text-sm"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
