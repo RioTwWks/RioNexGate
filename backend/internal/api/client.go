@@ -96,6 +96,11 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "user inactive")
 		return
 	}
+	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
+		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+		writeError(w, http.StatusForbidden, "user expired")
+		return
+	}
 
 	subToken, err := h.db.EnsureSubscriptionToken(user.ID)
 	if err != nil {
@@ -277,6 +282,10 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	}
 	if !user.Active {
 		writeError(w, http.StatusForbidden, "subscription inactive")
+		return
+	}
+	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
+		writeError(w, http.StatusForbidden, "subscription expired")
 		return
 	}
 

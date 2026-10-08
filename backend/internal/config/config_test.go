@@ -12,7 +12,7 @@ func TestStealthDefaults(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
 	content := `server:
-  api_key: test
+  api_key: test-api-key-ok1
 database:
   path: ./data/test.db
 core:

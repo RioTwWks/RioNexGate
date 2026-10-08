@@ -15,6 +15,8 @@ events {
 }
 
 http {
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
     upstream backend {
         server backend:8080;
     }
@@ -40,13 +42,22 @@ http {
         ssl_ciphers         HIGH:!aNULL:!MD5;
         ssl_prefer_server_ciphers on;
 
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy no-referrer always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
         location /api/ {
+            limit_req zone=api_limit burst=20 nodelay;
             proxy_pass http://backend;
             proxy_pass_request_headers on;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header X-API-Key $http_x_api_key;
+            proxy_set_header X-Device-Token $http_x_device_token;
+            proxy_set_header X-Registration-Secret $http_x_registration_secret;
         }
 
         location / {

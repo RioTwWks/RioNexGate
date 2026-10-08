@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -20,6 +21,11 @@ type ServerConfig struct {
 	APIKey           string `mapstructure:"api_key"`
 	PublicBaseURL    string `mapstructure:"public_base_url"`
 	ClientSOCKS5Port int    `mapstructure:"client_socks5_port"`
+	// RegistrationSecret, when set, allows POST /api/client/register with
+	// header X-Registration-Secret (for RioNexTunnel without exposing the admin API key).
+	RegistrationSecret string `mapstructure:"registration_secret"`
+	// AllowOpenRegister enables unauthenticated device registration (insecure; LAN/dev only).
+	AllowOpenRegister bool `mapstructure:"allow_open_register"`
 }
 
 type DatabaseConfig struct {
@@ -51,7 +57,11 @@ func (m *MultihopConfig) IsEntryNode() bool {
 type XrayConfig struct {
 	ConfigPath string `mapstructure:"config_path"`
 	BinaryPath string `mapstructure:"binary_path"`
+	// APIAddress is where the backend connects to query Xray stats.
 	APIAddress string `mapstructure:"api_address"`
+	// APIListen is the bind address written into the generated Xray config.
+	// Defaults to loopback derived from APIAddress (never 0.0.0.0).
+	APIListen string `mapstructure:"api_listen"`
 }
 
 type SingboxConfig struct {
@@ -242,7 +252,37 @@ func Load() (*Config, error) {
 		cfg.Server.ClientSOCKS5Port = 10808
 	}
 
+	if err := ValidateAPIKey(cfg.Server.APIKey); err != nil {
+		return nil, err
+	}
+
 	return &cfg, nil
+}
+
+// insecureAPIKeys are placeholders that must never be used in a running panel.
+var insecureAPIKeys = map[string]struct{}{
+	"":                        {},
+	"change-me":               {},
+	"change-me-to-secure-key": {},
+	"YOUR_API_KEY":            {},
+}
+
+// ValidateAPIKey rejects empty and well-known insecure placeholder keys.
+// Test configs may set RIONEXGATE_ALLOW_INSECURE_API_KEY=1 to bypass.
+func ValidateAPIKey(key string) error {
+	if os.Getenv("RIONEXGATE_ALLOW_INSECURE_API_KEY") == "1" {
+		if key == "" {
+			return fmt.Errorf("server.api_key is empty")
+		}
+		return nil
+	}
+	if _, bad := insecureAPIKeys[key]; bad {
+		return fmt.Errorf("server.api_key is missing or insecure; set a long random value in config.yaml (refusing placeholders like change-me-to-secure-key)")
+	}
+	if len(key) < 16 {
+		return fmt.Errorf("server.api_key is too short (minimum 16 characters)")
+	}
+	return nil
 }
 
 func (c *Config) SetCoreType(t string) {

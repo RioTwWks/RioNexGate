@@ -1,6 +1,6 @@
 server:
   port: 18080
-  api_key: "e2e-test-key"
+  api_key: "e2e-test-key-16ch"
 
 database:
   path: "../e2e/data/rionexgate.db"

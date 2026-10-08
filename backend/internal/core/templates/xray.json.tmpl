@@ -33,7 +33,7 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
           {
             "id": "{{$u.UUID}}",
-            "email": "{{$u.Email}}",
+            "email": {{jsonString $u.Email}},
             "level": 0
           }
 {{- end}}
@@ -45,15 +45,15 @@
         "security": "reality",
         "realitySettings": {
           "show": {{.Stealth.Reality.Show}},
-          "dest": "{{.Stealth.Reality.Dest}}",
+          "dest": {{jsonString .Stealth.Reality.Dest}},
           "xver": {{.Stealth.Reality.Xver}},
           "serverNames": [{{jsonStrings .Stealth.Reality.ServerNames}}],
-          "privateKey": "{{.Stealth.Reality.PrivateKey}}",
+          "privateKey": {{jsonString .Stealth.Reality.PrivateKey}},
           "shortIds": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
         },
         "xhttpSettings": {
-          "path": "{{.Stealth.XHTTP.Path}}",
-          "mode": "{{.Stealth.XHTTP.Mode}}"
+          "path": {{jsonString .Stealth.XHTTP.Path}},
+          "mode": {{jsonString .Stealth.XHTTP.Mode}}
         }
       },
       "sniffing": {
@@ -73,7 +73,7 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
           {
             "id": "{{$u.UUID}}",
-            "email": "{{$u.Email}}",
+            "email": {{jsonString $u.Email}},
             "flow": "xtls-rprx-vision",
             "level": 0
           }
@@ -86,10 +86,10 @@
         "security": "reality",
         "realitySettings": {
           "show": {{.Stealth.Reality.Show}},
-          "dest": "{{.Stealth.Reality.Dest}}",
+          "dest": {{jsonString .Stealth.Reality.Dest}},
           "xver": {{.Stealth.Reality.Xver}},
           "serverNames": [{{jsonStrings .Stealth.Reality.ServerNames}}],
-          "privateKey": "{{.Stealth.Reality.PrivateKey}}",
+          "privateKey": {{jsonString .Stealth.Reality.PrivateKey}},
           "shortIds": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
         }
       },
@@ -110,7 +110,7 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
           {
             "id": "{{$u.UUID}}",
-            "email": "{{$u.Email}}",
+            "email": {{jsonString $u.Email}},
             "level": 0
           }
 {{- end}}
@@ -121,7 +121,7 @@
         "network": "tcp",
         "security": "tls",
         "tlsSettings": {
-          "serverName": "{{.Stealth.TLS.SNI}}",
+          "serverName": {{jsonString .Stealth.TLS.SNI}},
           "alpn": [{{jsonStrings .Stealth.TLS.ALPN}}]
         }{{if stealthFragmentationTLS .Stealth}},
         "finalmask": {
@@ -149,7 +149,7 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
           {
             "id": "{{$u.UUID}}",
-            "email": "{{$u.Email}}",
+            "email": {{jsonString $u.Email}},
             "level": 0
           }
 {{- end}}
@@ -195,8 +195,8 @@
           "shortId": "{{$ob.Creds.ShortID}}"
         }{{end}}{{if eq $ob.Creds.NetworkOrDefault "xhttp"}},
         "xhttpSettings": {
-          "path": "{{$ob.Creds.Path}}",
-          "mode": "{{$ob.Creds.Mode}}"
+          "path": {{jsonString $ob.Creds.Path}},
+          "mode": {{jsonString $ob.Creds.Mode}}
         }{{end}}
       }
     },
@@ -217,7 +217,7 @@
 {{- range $i, $rule := .Multihop.Routings}}{{if $i}},{{end}}
       {
         "type": "field",
-        "user": [{{range $j, $email := $rule.UserEmails}}{{if $j}}, {{end}}"{{$email}}"{{end}}],
+        "user": [{{range $j, $email := $rule.UserEmails}}{{if $j}}, {{end}}{{jsonString $email}}{{end}}],
         "outboundTag": "{{$rule.OutboundTag}}-chain"
       }
 {{- end}}

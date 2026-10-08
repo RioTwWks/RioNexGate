@@ -16,13 +16,13 @@ import (
 func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.Handler {
 	h := NewHandler(database, coreMgr, cfg)
 	r := chi.NewRouter()
-	r.Use(chimiddleware.Logger)
+	r.Use(middleware.AccessLogger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.APIVersioning)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key", "X-Device-Token", "X-API-Version"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key", "X-Device-Token", "X-Registration-Secret", "X-API-Version"},
 		ExposedHeaders:   []string{"X-API-Version", "X-Config-Cached"},
 		AllowCredentials: false,
 	}))
@@ -34,7 +34,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 		r.Get("/subscription/{token}", h.GetSubscription)
 
 		r.Route("/client", func(r chi.Router) {
-			r.Post("/register", h.RegisterClient)
+			r.With(middleware.ClientRegisterAuth(cfg)).Post("/register", h.RegisterClient)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.DeviceTokenAuth(database))
 				r.Use(middleware.ClientRequestLogger)

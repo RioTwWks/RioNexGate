@@ -63,8 +63,8 @@ func TestDeviceTokenAuth(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/?token="+device.Token, nil)
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected authorized device via query token, code=%d body=%s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected query token rejected, code=%d body=%s", rr.Code, rr.Body.String())
 	}
 
 	subToken, err := database.EnsureSubscriptionToken(user.ID)

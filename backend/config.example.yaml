@@ -1,6 +1,11 @@
 server:
   port: 8080
+  # REQUIRED: long random value (min 16 chars). Placeholders like change-me-to-secure-key are rejected at startup.
   api_key: "change-me-to-secure-key"   # same key used in the web panel
+  # Optional: allow RioNexTunnel to register devices without the admin API key.
+  # registration_secret: "long-random-registration-secret"
+  # DANGEROUS: unauthenticated POST /api/client/register (LAN/dev only).
+  allow_open_register: false
 
 database:
   path: "./data/rionexgate.db"
@@ -13,7 +18,12 @@ core:
   xray:
     config_path: "./data/xray/config.json"
     binary_path: "/usr/local/bin/xray"
-    api_address: "host.docker.internal:10085"   # backend stats URL; xray binds 0.0.0.0:10085 on Linux host network
+    # Where the backend container connects for stats (host-gateway from bridge network).
+    api_address: "host.docker.internal:10085"
+    # Bind address in generated Xray config (default: 127.0.0.1 — never 0.0.0.0).
+    # For Docker bridge → host stats without opening all interfaces, set e.g. 172.17.0.1:10085
+    # and keep a host firewall. Leave empty to use loopback derived from api_address.
+    api_listen: "127.0.0.1:10085"
   singbox:
     config_path: "./data/sing-box/config.json"
     binary_path: "/usr/local/bin/sing-box"

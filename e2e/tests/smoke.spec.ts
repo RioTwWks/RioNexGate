@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_KEY = 'e2e-test-key';
+const API_KEY = 'e2e-test-key-16ch';
 
 test.describe('RioNexGate panel', () => {
   test('login and view dashboard', async ({ page }) => {

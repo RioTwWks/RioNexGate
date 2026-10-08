@@ -188,7 +188,12 @@ paths:
   /client/register:
     post:
       summary: Register a RioNexTunnel device
-      security: []
+      description: |
+        Requires `X-API-Key` or `X-Registration-Secret` (when `server.registration_secret` is set).
+        Unauthenticated registration is disabled unless `server.allow_open_register: true`.
+      security:
+        - ApiKeyAuth: []
+        - RegistrationSecretAuth: []
       tags: [RioNexTunnel]
       requestBody:
         required: true
@@ -203,6 +208,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RegisterDeviceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /client/config:
     get:
       summary: JSON client config with config_hash
@@ -211,11 +218,6 @@ paths:
         - DeviceTokenAuth: []
       parameters:
         - $ref: "#/components/parameters/DeviceToken"
-        - name: token
-          in: query
-          description: Device token alternative to X-Device-Token header (not subscription token)
-          schema:
-            type: string
       responses:
         "200":
           description: Client configuration
@@ -472,6 +474,11 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
+    RegistrationSecretAuth:
+      type: apiKey
+      in: header
+      name: X-Registration-Secret
+      description: Optional client registration secret (`server.registration_secret`)
     DeviceTokenAuth:
       type: apiKey
       in: header

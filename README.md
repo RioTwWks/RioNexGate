@@ -116,7 +116,7 @@ In the link modal you can choose **VLESS**, **VMess**, or **Trojan**. With steal
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/client/register` | none | Register device → `device_token`, `subscription_url` |
+| `POST /api/client/register` | `X-API-Key` or `X-Registration-Secret` | Register device → `device_token`, `subscription_url` |
 | `GET /api/client/config` | `X-Device-Token` | JSON config with `config_hash` and transport profiles |
 | `POST /api/client/stats` | `X-Device-Token` | Session telemetry |
 | `GET /api/client/commands` | `X-Device-Token` | Long-poll or SSE (`?stream=sse`) for `refresh_config` etc. |
@@ -129,7 +129,9 @@ Example registration:
 ```bash
 curl -X POST http://localhost:8888/api/client/register \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
   -d '{"email":"user@example.com","label":"laptop"}'
+# or: -H "X-Registration-Secret: $REG_SECRET"  (server.registration_secret)
 ```
 
 ## Stealth / anti-DPI (Reality + XHTTP)
@@ -252,7 +254,9 @@ Configure in `backend/config.yaml` or via `.env` (`TELEGRAM_BOT_TOKEN`).
 ```yaml
 server:
   port: 8080
-  api_key: "change-me"          # panel and API key
+  api_key: "long-random-key"    # required; min 16 chars; placeholders rejected at startup
+  # registration_secret: "..."  # optional: X-Registration-Secret for device register
+  allow_open_register: false    # never enable on a public host
 
 database:
   path: "./data/rionexgate.db"
@@ -264,7 +268,8 @@ core:
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
-    api_address: "host.docker.internal:10085"
+    api_address: "host.docker.internal:10085"  # backend → host stats URL
+    api_listen: "127.0.0.1:10085"               # Xray bind (never 0.0.0.0 by default)
   singbox:
     config_path: "./data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
@@ -282,6 +287,8 @@ limits:
   default_traffic_gb: 50
   default_expire_days: 30
 ```
+
+See [.cursor/plans/security-hardening.md](.cursor/plans/security-hardening.md) for the security hardening roadmap.
 
 Full example (no secrets): [`backend/config.example.yaml`](backend/config.example.yaml).
 

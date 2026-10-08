@@ -62,7 +62,7 @@ func TestGenerateMultihopXrayConfigWithUICredentials(t *testing.T) {
 		func(models.User) *models.Node { return &exit },
 	)
 
-	raw, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, multihop)
+	raw, err := generateXrayConfig(443, "127.0.0.1:10085", "", users, nil, multihop)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestGenerateMultihopXrayConfig(t *testing.T) {
 		func(models.User) *models.Node { return &exit },
 	)
 
-	raw, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, multihop)
+	raw, err := generateXrayConfig(443, "127.0.0.1:10085", "", users, nil, multihop)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestMultihopStealthIncludesUsersInAllInbounds(t *testing.T) {
 		func(models.User) *models.Node { return &exit },
 	)
 
-	raw, err := generateXrayConfig(443, "127.0.0.1:10085", users, stealth, multihop)
+	raw, err := generateXrayConfig(443, "127.0.0.1:10085", "", users, stealth, multihop)
 	if err != nil {
 		t.Fatal(err)
 	}

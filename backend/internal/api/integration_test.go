@@ -29,7 +29,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	xrayPath := filepath.Join(dir, "xray", "config.json")
 
 	cfg := &config.Config{
-		Server: config.ServerConfig{Port: 8080, APIKey: "test-secret"},
+		Server: config.ServerConfig{Port: 8080, APIKey: "test-secret-key16"},
 		Database: config.DatabaseConfig{Path: dbPath},
 		Core: config.CoreConfig{
 			Type:       "xray",
@@ -68,7 +68,7 @@ func TestAPIE2E_UserCRUDAndLinks(t *testing.T) {
 	client := &http.Client{}
 	base := srv.URL + "/api"
 	authHeader := func(req *http.Request) {
-		req.Header.Set("X-API-Key", "test-secret")
+		req.Header.Set("X-API-Key", "test-secret-key16")
 	}
 
 	// health (no auth)
@@ -180,7 +180,7 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	base := srv.URL + "/api"
 	authHeader := func(req *http.Request) {
-		req.Header.Set("X-API-Key", "test-secret")
+		req.Header.Set("X-API-Key", "test-secret-key16")
 	}
 
 	body := []byte(`{"email":"client@example.com","traffic_gb":5,"expire_days":14}`)
@@ -203,6 +203,19 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	req, _ = http.NewRequest(http.MethodPost, base+"/client/register", bytes.NewReader(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Version", "v1")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("register without auth: expected 401, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	req, _ = http.NewRequest(http.MethodPost, base+"/client/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Version", "v1")
+	authHeader(req)
 	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)

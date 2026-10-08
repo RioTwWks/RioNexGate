@@ -116,7 +116,7 @@ make dev-cores
 
 | Эндпоинт | Аутентификация | Описание |
 |----------|----------------|----------|
-| `POST /api/client/register` | нет | Регистрация устройства → `device_token`, `subscription_url` |
+| `POST /api/client/register` | `X-API-Key` или `X-Registration-Secret` | Регистрация устройства → `device_token`, `subscription_url` |
 | `GET /api/client/config` | `X-Device-Token` | JSON-конфиг с `config_hash` и транспортными профилями |
 | `POST /api/client/stats` | `X-Device-Token` | Телеметрия сессии |
 | `GET /api/client/commands` | `X-Device-Token` | Long-poll или SSE (`?stream=sse`) для `refresh_config` и др. |
@@ -129,7 +129,9 @@ make dev-cores
 ```bash
 curl -X POST http://localhost:8888/api/client/register \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
   -d '{"email":"user@example.com","label":"laptop"}'
+# или: -H "X-Registration-Secret: $REG_SECRET"  (server.registration_secret)
 ```
 
 ## Stealth / Anti-DPI (Reality + XHTTP)
@@ -252,7 +254,9 @@ make test-e2e   # требует Node 20+, Go 1.21+, gcc (CGO)
 ```yaml
 server:
   port: 8080
-  api_key: "change-me"          # ключ для панели и API
+  api_key: "long-random-key"    # обязателен; мин. 16 символов; плейсхолдеры отклоняются при старте
+  # registration_secret: "..."  # опционально: X-Registration-Secret для register
+  allow_open_register: false    # не включать на публичном хосте
 
 database:
   path: "./data/rionexgate.db"
@@ -264,7 +268,8 @@ core:
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
-    api_address: "host.docker.internal:10085"
+    api_address: "host.docker.internal:10085"  # backend → host stats
+    api_listen: "127.0.0.1:10085"               # bind Xray (не 0.0.0.0 по умолчанию)
   singbox:
     config_path: "./data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
@@ -283,6 +288,7 @@ limits:
   default_expire_days: 30
 ```
 
+План hardening: [.cursor/plans/security-hardening.md](.cursor/plans/security-hardening.md).  
 Пример без секретов: [`backend/config.example.yaml`](backend/config.example.yaml).
 
 ### `.env`

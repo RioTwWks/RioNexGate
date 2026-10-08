@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"net"
 	"strings"
 	"text/template"
@@ -25,17 +26,20 @@ type templateData struct {
 }
 
 // xrayAPIListenAddress returns the bind address for Xray's stats API in generated config.
-// api_address in config.yaml is used by the backend to query stats (often host.docker.internal
-// from the bridge network). Xray runs with network_mode: host on Linux and cannot resolve
-// host.docker.internal unless it is added to the host's /etc/hosts.
-func xrayAPIListenAddress(apiAddress string) string {
+// api_address is where the backend connects (may be host.docker.internal from a bridge
+// network). api_listen, when set, is used as-is. Otherwise the listen address defaults
+// to loopback — never 0.0.0.0. For Docker bridge → host stats, set api_listen to the
+// docker0 address (e.g. 172.17.0.1:10085) or run behind a host firewall.
+func xrayAPIListenAddress(apiAddress, apiListen string) string {
+	if strings.TrimSpace(apiListen) != "" {
+		return apiListen
+	}
 	host, port, err := net.SplitHostPort(apiAddress)
 	if err != nil {
 		return apiAddress
 	}
-	if host == "host.docker.internal" {
-		// Bind on all interfaces so backend (bridge) can reach via host-gateway.
-		return "0.0.0.0:" + port
+	if host == "host.docker.internal" || host == "0.0.0.0" || host == "" {
+		return "127.0.0.1:" + port
 	}
 	return apiAddress
 }
@@ -46,6 +50,7 @@ func renderTemplate(name string, data templateData) ([]byte, error) {
 		return nil, err
 	}
 	funcMap := template.FuncMap{
+		"jsonString":    jsonString,
 		"jsonStrings":   jsonStringList,
 		"stealthSNI":    stealthPrimarySNI,
 		"stealthActive": stealthIsActive,
@@ -96,19 +101,27 @@ func stealthFragmentMaxSplit(s *config.StealthConfig) string {
 	return s.Fragmentation.MaxSplitOrDefault()
 }
 
+func jsonString(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return `""`
+	}
+	return string(b)
+}
+
 func jsonStringList(items []string) string {
 	quoted := make([]string, len(items))
 	for i, item := range items {
-		quoted[i] = `"` + item + `"`
+		quoted[i] = jsonString(item)
 	}
 	return strings.Join(quoted, ", ")
 }
 
-func generateXrayConfig(listenPort int, apiAddress string, users []models.User, stealth *config.StealthConfig, multihop MultihopData) ([]byte, error) {
+func generateXrayConfig(listenPort int, apiAddress, apiListen string, users []models.User, stealth *config.StealthConfig, multihop MultihopData) ([]byte, error) {
 	return renderTemplate("xray.json.tmpl", templateData{
 		ListenPort:       listenPort,
 		APIAddress:       apiAddress,
-		APIListenAddress: xrayAPIListenAddress(apiAddress),
+		APIListenAddress: xrayAPIListenAddress(apiAddress, apiListen),
 		Users:            users,
 		Stealth:          stealth,
 		Multihop:         multihop,

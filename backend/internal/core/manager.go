@@ -94,7 +94,7 @@ func (m *manager) Reload() error {
 	case "skadi":
 		data, err = generateSkadiConfig(listenPort, m.cfg.Core.Skadi, users, stealth)
 	default:
-		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, users, stealth, multihop)
+		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, m.cfg.Core.Xray.APIListen, users, stealth, multihop)
 	}
 	if err != nil {
 		return err
@@ -116,10 +116,13 @@ func (m *manager) Reload() error {
 // never observe a partially written JSON file.
 func writeConfigAtomic(path string, data []byte) error {
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 func (m *manager) reloadAWGConfig(users []models.User) error {
@@ -130,7 +133,7 @@ func (m *manager) reloadAWGConfig(users []models.User) error {
 	peers, err := m.db.ListWireGuardPeersForUsers(ids); if err != nil { return err }
 	data, err := BuildAWGServerConfig(awg, users, peers); if err != nil { return err }
 	p := awg.ConfigPathOrDefault(); if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { return err }
-	return os.WriteFile(p, data, 0o644)
+	return os.WriteFile(p, data, 0o600)
 }
 
 func (m *manager) GetStats(userID string) (float64, error) {

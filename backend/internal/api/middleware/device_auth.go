@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"rionexgate/internal/db"
 	"rionexgate/internal/models"
@@ -22,10 +23,7 @@ func DeviceFromContext(ctx context.Context) (*DeviceContext, bool) {
 }
 
 func deviceTokenFromRequest(r *http.Request) string {
-	if token := r.Header.Get("X-Device-Token"); token != "" {
-		return token
-	}
-	return r.URL.Query().Get("token")
+	return r.Header.Get("X-Device-Token")
 }
 
 func writeDeviceAuthError(w http.ResponseWriter, status int, msg, hint string) {
@@ -38,13 +36,26 @@ func writeDeviceAuthError(w http.ResponseWriter, status int, msg, hint string) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+func userAccessForbidden(user *models.User) (forbidden bool, msg string) {
+	if user == nil {
+		return true, "unauthorized"
+	}
+	if !user.Active {
+		return true, "user inactive"
+	}
+	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
+		return true, "user expired"
+	}
+	return false, ""
+}
+
 func DeviceTokenAuth(database *db.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := deviceTokenFromRequest(r)
 			if token == "" {
 				writeDeviceAuthError(w, http.StatusUnauthorized, "unauthorized",
-					"RioNexTunnel requires X-Device-Token (device token from POST /api/client/register), not subscription token")
+					"RioNexTunnel requires X-Device-Token header (from POST /api/client/register), not subscription token")
 				return
 			}
 			device, err := database.GetDeviceByToken(token)
@@ -63,8 +74,8 @@ func DeviceTokenAuth(database *db.DB) func(http.Handler) http.Handler {
 				writeDeviceAuthError(w, http.StatusUnauthorized, "unauthorized", "")
 				return
 			}
-			if !user.Active {
-				writeDeviceAuthError(w, http.StatusForbidden, "user inactive", "")
+			if forbidden, msg := userAccessForbidden(user); forbidden {
+				writeDeviceAuthError(w, http.StatusForbidden, msg, "")
 				return
 			}
 			dc := &DeviceContext{Device: device, User: user}
