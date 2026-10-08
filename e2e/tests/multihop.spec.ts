@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-const API_KEY = 'e2e-test-key';
+const API_KEY = 'e2e-test-key-16ch';
 test.describe('Multi-hop nodes', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');

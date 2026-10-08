@@ -67,7 +67,7 @@ func TestGenerateXrayConfig(t *testing.T) {
 		{UUID: "uuid-1", Email: "a@example.com"},
 		{UUID: "uuid-2", Email: "b@example.com"},
 	}
-	data, err := generateXrayConfig(443, "127.0.0.1:10085", users, nil, MultihopData{})
+	data, err := generateXrayConfig(443, "127.0.0.1:10085", "", users, nil, MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,13 +81,22 @@ func TestGenerateXrayConfig(t *testing.T) {
 }
 
 func TestGenerateXrayConfigDockerInternalListen(t *testing.T) {
-	data, err := generateXrayConfig(443, "host.docker.internal:10085", nil, nil, MultihopData{})
+	data, err := generateXrayConfig(443, "host.docker.internal:10085", "", nil, nil, MultihopData{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := string(data)
-	if !strings.Contains(body, `"listen": "0.0.0.0:10085"`) {
-		t.Fatalf("expected host-network bind address, got: %s", body)
+	if !strings.Contains(body, `"listen": "127.0.0.1:10085"`) {
+		t.Fatalf("expected loopback bind for host.docker.internal default, got: %s", body)
+	}
+
+	data, err = generateXrayConfig(443, "host.docker.internal:10085", "172.17.0.1:10085", nil, nil, MultihopData{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = string(data)
+	if !strings.Contains(body, `"listen": "172.17.0.1:10085"`) {
+		t.Fatalf("expected explicit api_listen override, got: %s", body)
 	}
 }
 

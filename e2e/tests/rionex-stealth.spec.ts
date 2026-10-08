@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
-const API_KEY = 'e2e-test-key';
+const API_KEY = 'e2e-test-key-16ch';
 const backendPort = process.env.E2E_BACKEND_PORT || '18080';
 const backendBase = `http://127.0.0.1:${backendPort}/api`;
 
@@ -81,7 +81,11 @@ test.describe('RioNexTunnel subscription', () => {
 
   test('device registration appears in user detail', async ({ request, page }) => {
     const regRes = await request.post(`${backendBase}/client/register`, {
-      headers: { 'Content-Type': 'application/json', 'X-API-Version': 'v1' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Version': 'v1',
+        'X-API-Key': API_KEY,
+      },
       data: { user_id: userId, label: 'e2e-phone' },
     });
     expect(regRes.status()).toBe(201);

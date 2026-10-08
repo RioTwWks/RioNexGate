@@ -11,23 +11,23 @@ enabled = true
 
 [[protocol.vless.users]]
 id = "{{.UUID}}"
-email = "{{.Email}}"
+email = {{jsonString .Email}}
 {{- end}}
 {{- if .UseReality}}
 
 [transport.reality]
 enabled = true
-dest = "{{.Stealth.Reality.Dest}}"
+dest = {{jsonString .Stealth.Reality.Dest}}
 server_names = [{{jsonStrings .Stealth.Reality.ServerNames}}]
-private_key = "{{.Stealth.Reality.PrivateKey}}"
+private_key = {{jsonString .Stealth.Reality.PrivateKey}}
 short_ids = [{{jsonStrings .Stealth.Reality.ShortIDs}}]
 kex_mode = "classic"
 {{- if .UseXHTTP}}
 
 [transport.xhttp]
 enabled = true
-path = "{{.Stealth.XHTTP.Path}}"
-mode = "{{.Stealth.XHTTP.Mode}}"
+path = {{jsonString .Stealth.XHTTP.Path}}
+mode = {{jsonString .Stealth.XHTTP.Mode}}
 {{- end}}
 {{- end}}
 {{- if .APIAddress}}

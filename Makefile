@@ -5,10 +5,18 @@ DOCKER_COMPOSE := $(ROOT)scripts/docker-compose.sh
 .PHONY: build up down dev dev-cores dev-cores-singbox dev-cores-skadi dev-local docker-doctor test clean migrate init logs docker-check
 
 init:
-	cp -n backend/config.example.yaml backend/config.yaml 2>/dev/null || true
+	@if [ ! -f backend/config.yaml ]; then \
+		cp backend/config.example.yaml backend/config.yaml; \
+		KEY="$$(openssl rand -hex 16)"; \
+		sed -i "s/change-me-to-secure-key/$$KEY/" backend/config.yaml; \
+		echo "Generated server.api_key in backend/config.yaml"; \
+	else \
+		echo "backend/config.yaml already exists (not overwritten)"; \
+	fi
 	cp -n .env.example .env 2>/dev/null || true
 	mkdir -p data/xray data/sing-box data/skadi data/awg data/nginx/ssl backups
 	@echo "Panel URL after make dev: http://localhost:$${HTTP_PORT:-8888}"
+	@echo "Sign in with server.api_key from backend/config.yaml (placeholder keys are rejected at startup)."
 
 docker-check:
 	@$(ROOT)scripts/docker-check.sh

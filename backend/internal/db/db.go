@@ -186,7 +186,10 @@ func (d *DB) DeleteUser(id uint) error {
 
 func (d *DB) ListActiveUsers() ([]models.User, error) {
 	var users []models.User
-	err := d.Where("active = ?", true).Find(&users).Error
+	now := time.Now()
+	// Include users with zero/null expires_at (no expiry) or future expiry.
+	err := d.Where("active = ? AND (expires_at IS NULL OR expires_at <= ? OR expires_at > ?)",
+		true, time.Time{}, now).Find(&users).Error
 	return users, err
 }
 

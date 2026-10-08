@@ -99,6 +99,7 @@ func renderSkadiTemplate(data skadiTemplateData) ([]byte, error) {
 		return nil, err
 	}
 	funcMap := template.FuncMap{
+		"jsonString":    jsonString,
 		"jsonStrings":   jsonStringList,
 		"stealthSNI":    stealthPrimarySNI,
 		"stealthActive": stealthIsActive,

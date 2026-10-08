@@ -14,5 +14,23 @@ if [ ! -f "$ARCHIVE" ]; then
   exit 1
 fi
 
-tar -xzf "$ARCHIVE" -C "$ROOT"
+# Only allow members under data/; reject absolute paths and .. traversal.
+while IFS= read -r member; do
+  [ -z "$member" ] && continue
+  case "$member" in
+    data|data/*) ;;
+    *)
+      echo "Refusing to restore: archive member outside data/: $member" >&2
+      exit 1
+      ;;
+  esac
+  case "$member" in
+    *..*|/*)
+      echo "Refusing to restore: unsafe archive member: $member" >&2
+      exit 1
+      ;;
+  esac
+done < <(tar -tzf "$ARCHIVE")
+
+tar -xzf "$ARCHIVE" -C "$ROOT" -- data
 echo "Restored data/ from $ARCHIVE"

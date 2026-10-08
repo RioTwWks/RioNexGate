@@ -14,27 +14,27 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
         {
           "uuid": "{{$u.UUID}}",
-          "name": "{{$u.Email}}"
+          "name": {{jsonString $u.Email}}
         }
 {{- end}}
       ],
       "tls": {
         "enabled": true,
-        "server_name": "{{stealthSNI .Stealth}}",
+        "server_name": {{jsonString (stealthSNI .Stealth)}},
         "reality": {
           "enabled": true,
           "handshake": {
-            "server": "{{stealthSNI .Stealth}}",
+            "server": {{jsonString (stealthSNI .Stealth)}},
             "server_port": 443
           },
-          "private_key": "{{.Stealth.Reality.PrivateKey}}",
+          "private_key": {{jsonString .Stealth.Reality.PrivateKey}},
           "short_id": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
         }
       },
       "transport": {
         "type": "xhttp",
-        "path": "{{.Stealth.XHTTP.Path}}",
-        "mode": "{{.Stealth.XHTTP.Mode}}"
+        "path": {{jsonString .Stealth.XHTTP.Path}},
+        "mode": {{jsonString .Stealth.XHTTP.Mode}}
       }
     }{{if or .Stealth.Vision.Enabled .Stealth.TLS.Enabled}},{{end}}
 {{- end}}
@@ -48,21 +48,21 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
         {
           "uuid": "{{$u.UUID}}",
-          "name": "{{$u.Email}}",
+          "name": {{jsonString $u.Email}},
           "flow": "xtls-rprx-vision"
         }
 {{- end}}
       ],
       "tls": {
         "enabled": true,
-        "server_name": "{{stealthSNI .Stealth}}",
+        "server_name": {{jsonString (stealthSNI .Stealth)}},
         "reality": {
           "enabled": true,
           "handshake": {
-            "server": "{{stealthSNI .Stealth}}",
+            "server": {{jsonString (stealthSNI .Stealth)}},
             "server_port": 443
           },
-          "private_key": "{{.Stealth.Reality.PrivateKey}}",
+          "private_key": {{jsonString .Stealth.Reality.PrivateKey}},
           "short_id": [{{jsonStrings .Stealth.Reality.ShortIDs}}]
         }
       }
@@ -78,13 +78,13 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
         {
           "uuid": "{{$u.UUID}}",
-          "name": "{{$u.Email}}"
+          "name": {{jsonString $u.Email}}
         }
 {{- end}}
       ],
       "tls": {
         "enabled": true,
-        "server_name": "{{.Stealth.TLS.SNI}}",
+        "server_name": {{jsonString .Stealth.TLS.SNI}},
         "alpn": [{{jsonStrings .Stealth.TLS.ALPN}}]
       }
     }
@@ -99,7 +99,7 @@
 {{- range $i, $u := .Users}}{{if $i}},{{end}}
         {
           "uuid": "{{$u.UUID}}",
-          "name": "{{$u.Email}}"
+          "name": {{jsonString $u.Email}}
         }
 {{- end}}
       ],
