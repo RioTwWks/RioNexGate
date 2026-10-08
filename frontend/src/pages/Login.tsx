@@ -52,7 +52,7 @@ export function Login() {
             type="password"
             required
             autoFocus
-            placeholder="server.api_key from config.yaml"
+            placeholder="API key"
             value={key}
             onChange={(e) => setKey(e.target.value)}
             className="input font-mono"
