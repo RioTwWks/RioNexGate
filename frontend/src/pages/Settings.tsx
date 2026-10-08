@@ -1,24 +1,48 @@
 import { useEffect, useState } from 'react';
+import { PageHeader } from '../components/ui';
 import api from '../services/api';
+
+const CORES = [
+  {
+    id: 'xray',
+    label: 'Xray',
+    description: 'Full VLESS Reality + Vision / XHTTP. Default for multihop.',
+  },
+  {
+    id: 'sing-box',
+    label: 'sing-box',
+    description: 'Alternative core with JSON config generation.',
+  },
+  {
+    id: 'skadi',
+    label: 'SkadiCore',
+    description: 'Single listen (Reality ± XHTTP). Vision flow not supported.',
+  },
+] as const;
 
 export function Settings() {
   const [coreType, setCoreType] = useState('xray');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get<{ type: string }>('/core/type').then((res) => setCoreType(res.data.type));
+    api
+      .get<{ type: string }>('/core/type')
+      .then((res) => setCoreType(res.data.type))
+      .catch(() => setError('Failed to load core type'));
   }, []);
 
   const switchCore = async (type: string) => {
     setLoading(true);
     setMessage('');
+    setError('');
     try {
       await api.put('/core/type', { type });
       setCoreType(type);
       setMessage(`Switched to ${type}`);
     } catch {
-      setMessage('Failed to switch core');
+      setError('Failed to switch core');
     } finally {
       setLoading(false);
     }
@@ -27,67 +51,71 @@ export function Settings() {
   const reload = async () => {
     setLoading(true);
     setMessage('');
+    setError('');
     try {
       await api.post('/core/reload');
       setMessage('Core reloaded');
     } catch {
-      setMessage('Reload failed');
+      setError('Reload failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-6">Settings</h1>
-      {message && <p className="mb-4 text-sky-400">{message}</p>}
-      <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-md space-y-4">
+    <div className="page max-w-3xl">
+      <PageHeader
+        title="Settings"
+        subtitle="Active proxy core and configuration reload"
+      />
+
+      {message && <p className="alert-ok">{message}</p>}
+      {error && <p className="alert-error">{error}</p>}
+
+      <section className="card-pad space-y-5">
         <div>
-          <p className="text-slate-400 text-sm mb-2">Active core</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              disabled={loading}
-              onClick={() => switchCore('xray')}
-              className={`px-4 py-2 rounded ${
-                coreType === 'xray' ? 'bg-sky-600' : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              Xray
-            </button>
-            <button
-              disabled={loading}
-              onClick={() => switchCore('sing-box')}
-              className={`px-4 py-2 rounded ${
-                coreType === 'sing-box' ? 'bg-sky-600' : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              sing-box
-            </button>
-            <button
-              disabled={loading}
-              onClick={() => switchCore('skadi')}
-              className={`px-4 py-2 rounded ${
-                coreType === 'skadi' ? 'bg-sky-600' : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              SkadiCore
-            </button>
+          <p className="text-sm font-medium text-slate-200 mb-1">Active core</p>
+          <p className="text-xs text-slate-500 mb-4">
+            Switching regenerates configs for the selected engine. Reload after stealth or node changes.
+          </p>
+          <div className="grid gap-3">
+            {CORES.map((core) => {
+              const selected = coreType === core.id;
+              return (
+                <button
+                  key={core.id}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => switchCore(core.id)}
+                  className={`text-left rounded-xl border px-4 py-3 transition-colors ${
+                    selected
+                      ? 'border-sky-500/40 bg-sky-600/15 shadow-glow'
+                      : 'border-surface-border bg-slate-950/40 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{core.label}</span>
+                    {selected && <span className="badge-info">Selected</span>}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{core.description}</p>
+                </button>
+              );
+            })}
           </div>
           {coreType === 'skadi' && (
-            <p className="text-slate-500 text-xs mt-2">
+            <p className="text-slate-500 text-xs mt-3">
               SkadiCore: single listen port (Reality ± XHTTP). Vision flow is not supported;
               client links use TCP+Reality without xtls-rprx-vision.
             </p>
           )}
         </div>
-        <button
-          disabled={loading}
-          onClick={reload}
-          className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
-        >
-          Reload core config
-        </button>
-      </div>
+
+        <div className="pt-2 border-t border-surface-border">
+          <button type="button" disabled={loading} onClick={reload} className="btn-secondary">
+            Reload core config
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

@@ -70,24 +70,13 @@ export function StealthWarnings({ settings }: Props) {
   const warnings = collectWarnings(settings);
 
   if (warnings.length === 0) {
-    return (
-      <div className="rounded-lg border border-emerald-800/50 bg-emerald-900/20 p-4 text-sm text-emerald-300">
-        No security warnings detected for current settings.
-      </div>
-    );
+    return <div className="alert-ok">No security warnings detected for current settings.</div>;
   }
 
   return (
     <div className="space-y-2">
       {warnings.map((w, i) => (
-        <div
-          key={i}
-          className={`rounded-lg border p-3 text-sm ${
-            w.severity === 'error'
-              ? 'border-red-800/50 bg-red-900/20 text-red-300'
-              : 'border-amber-800/50 bg-amber-900/20 text-amber-300'
-          }`}
-        >
+        <div key={i} className={w.severity === 'error' ? 'alert-error' : 'alert-warn'}>
           {w.message}
         </div>
       ))}

@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import { SyncStatusBadge } from '../components/SyncStatusBadge';
 import { UserChainSection } from '../components/UserChainSection';
+import { PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { Device } from '../types/device';
 import { getSyncStatus } from '../types/device';
 import type { ProfileLink } from '../types/stealth';
@@ -29,6 +30,7 @@ export function UserDetail({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedProfile, setCopiedProfile] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -74,64 +76,76 @@ export function UserDetail({ userId }: Props) {
     }
   };
 
-  const copyProfileLink = async (link: string) => {
+  const copyProfileLink = async (id: string, link: string) => {
     await navigator.clipboard.writeText(link);
+    setCopiedProfile(id);
+    setTimeout(() => setCopiedProfile(null), 2000);
   };
 
   if (loading) {
-    return <p className="text-slate-400">Loading...</p>;
+    return (
+      <div className="page">
+        <Spinner />
+      </div>
+    );
   }
 
   if (error && !user) {
-    return <p className="text-red-400">{error}</p>;
+    return <p className="alert-error">{error}</p>;
   }
 
   if (!user) return null;
 
-  const overallSync = devices.length === 0
-    ? 'never' as const
-    : devices.some((d) => getSyncStatus(d.last_seen_at) === 'synced')
-      ? 'synced' as const
-      : 'stale' as const;
+  const expired = new Date(user.expires_at).getTime() <= Date.now();
+  const overallSync =
+    devices.length === 0
+      ? ('never' as const)
+      : devices.some((d) => getSyncStatus(d.last_seen_at) === 'synced')
+        ? ('synced' as const)
+        : ('stale' as const);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="page">
+      <div>
         <Link to="/users" className="text-slate-400 hover:text-white text-sm">
           ← Users
         </Link>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{user.email}</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            {user.used_gb.toFixed(2)} / {user.traffic_gb} GB · Expires{' '}
-            {new Date(user.expires_at).toLocaleDateString()}
-          </p>
-        </div>
-        <SyncStatusBadge status={overallSync} />
+      <PageHeader
+        title={user.email}
+        subtitle={`Expires ${new Date(user.expires_at).toLocaleDateString()}`}
+        actions={
+          <>
+            <StatusBadge active={user.active} expired={expired} />
+            <SyncStatusBadge status={overallSync} />
+          </>
+        }
+      />
+
+      <div className="card-pad max-w-md">
+        <TrafficBar used={user.used_gb} limit={user.traffic_gb} />
       </div>
 
-      {error && <p className="text-red-400">{error}</p>}
+      {error && <p className="alert-error">{error}</p>}
 
       <UserChainSection user={user} onUpdated={setUser} />
 
-      {/* Subscription URL */}
-      <section className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+      <section className="card-pad">
         <h2 className="text-lg font-medium mb-3">Subscription</h2>
         {user.subscription_url ? (
           <div className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 readOnly
                 value={user.subscription_url}
-                className="flex-1 px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm font-mono"
+                className="input font-mono"
                 data-testid="subscription-url"
               />
               <button
+                type="button"
                 onClick={copySubscription}
-                className="px-4 py-2 rounded bg-sky-600 hover:bg-sky-500 text-sm whitespace-nowrap"
+                className="btn-primary whitespace-nowrap"
                 data-testid="copy-subscription"
               >
                 {copied ? 'Copied!' : 'Copy subscription'}
@@ -150,41 +164,42 @@ export function UserDetail({ userId }: Props) {
         )}
       </section>
 
-      {/* Devices */}
-      <section className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+      <section className="card-pad">
         <h2 className="text-lg font-medium mb-3">Registered devices</h2>
         {devices.length === 0 ? (
           <p className="text-slate-500 text-sm">No devices registered via RioNexTunnel yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-slate-400">
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="text-left p-2">Label</th>
-                  <th className="text-left p-2">Token</th>
-                  <th className="text-left p-2">Last seen</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-right p-2">Actions</th>
+                  <th>Label</th>
+                  <th>Token</th>
+                  <th>Last seen</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {devices.map((d) => (
-                  <tr key={d.id} className="border-t border-slate-800">
-                    <td className="p-2">{d.label || '—'}</td>
-                    <td className="p-2 font-mono text-xs">{maskToken(d.token)}</td>
-                    <td className="p-2">
-                      {d.last_seen_at
-                        ? new Date(d.last_seen_at).toLocaleString()
-                        : 'Never'}
+                  <tr key={d.id}>
+                    <td>{d.label || '—'}</td>
+                    <td className="font-mono text-xs">{maskToken(d.token)}</td>
+                    <td>
+                      {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString() : 'Never'}
                     </td>
-                    <td className="p-2">
-                      <SyncStatusBadge status={getSyncStatus(d.last_seen_at)} lastSeenAt={d.last_seen_at} />
+                    <td>
+                      <SyncStatusBadge
+                        status={getSyncStatus(d.last_seen_at)}
+                        lastSeenAt={d.last_seen_at}
+                      />
                     </td>
-                    <td className="p-2 text-right">
+                    <td className="text-right">
                       <button
+                        type="button"
                         onClick={() => handleRevoke(d.id)}
                         disabled={revoking === d.id}
-                        className="text-red-400 hover:underline disabled:opacity-50"
+                        className="text-red-400 hover:underline disabled:opacity-50 text-sm"
                       >
                         {revoking === d.id ? 'Revoking…' : 'Revoke'}
                       </button>
@@ -197,39 +212,34 @@ export function UserDetail({ userId }: Props) {
         )}
       </section>
 
-      {/* Profile links */}
       {profiles.length > 0 && (
-        <section className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+        <section className="card-pad">
           <h2 className="text-lg font-medium mb-3">Transport profiles</h2>
           <div className="space-y-3">
             {profiles
+              .slice()
               .sort((a, b) => a.priority - b.priority)
               .map((p) => (
-                <div key={p.id} className="border border-slate-800 rounded p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                <div key={p.id} className="rounded-xl border border-surface-border bg-slate-950/40 p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{p.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 uppercase">
-                        {p.transport}
-                      </span>
+                      <span className="badge-neutral uppercase">{p.transport}</span>
                       {p.tags.map((t) => (
-                        <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-300">
+                        <span key={t} className="badge-info">
                           {t}
                         </span>
                       ))}
                     </div>
                     <button
-                      onClick={() => copyProfileLink(p.link)}
-                      className="text-sky-400 hover:underline text-sm"
+                      type="button"
+                      onClick={() => copyProfileLink(p.id, p.link)}
+                      className="link-action"
                     >
-                      Copy
+                      {copiedProfile === p.id ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <input
-                    readOnly
-                    value={p.link}
-                    className="w-full px-2 py-1.5 rounded bg-slate-800 border border-slate-700 text-xs font-mono"
-                  />
+                  <input readOnly value={p.link} className="input font-mono text-xs" />
                 </div>
               ))}
           </div>
