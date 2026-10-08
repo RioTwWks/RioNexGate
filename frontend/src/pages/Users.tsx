@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { LinkModal } from '../components/LinkModal';
 import { UserForm } from '../components/UserForm';
+import { EmptyState, Modal, PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { User } from '../types/user';
 
 export function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [linkUserId, setLinkUserId] = useState<number | null>(null);
@@ -31,78 +33,117 @@ export function Users() {
 
   const deleteUser = async (id: number) => {
     if (!confirm('Delete this user?')) return;
-    await api.delete(`/users/${id}`);
-    fetchUsers();
+    try {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+    } catch {
+      setError('Failed to delete user');
+    }
   };
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => u.email.toLowerCase().includes(q));
+  }, [users, query]);
+
+  const now = Date.now();
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Users</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-4 py-2 rounded bg-sky-600 hover:bg-sky-500"
-        >
-          Add user
-        </button>
+    <div className="page">
+      <PageHeader
+        title="Users"
+        subtitle={`${users.length} accounts · subscription links and traffic limits`}
+        actions={
+          <button type="button" onClick={() => setShowAdd(true)} className="btn-primary">
+            Add user
+          </button>
+        }
+      />
+
+      {error && <p className="alert-error">{error}</p>}
+
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <input
+          className="input sm:max-w-xs"
+          placeholder="Filter by email…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <p className="text-xs text-slate-500">
+          Showing {filtered.length} of {users.length}
+        </p>
       </div>
 
-      {error && <p className="text-red-400 mb-4">{error}</p>}
       {loading ? (
-        <p className="text-slate-400">Loading...</p>
+        <Spinner />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+        <div className="table-shell overflow-x-auto">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="text-left p-3">Email</th>
-                <th className="text-left p-3">Used / Limit</th>
-                <th className="text-left p-3">Expires</th>
-                <th className="text-left p-3">Active</th>
-                <th className="text-right p-3">Actions</th>
+                <th>Email</th>
+                <th>Traffic</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-t border-slate-800">
-                  <td className="p-3">{u.email}</td>
-                  <td className="p-3">
-                    {u.used_gb.toFixed(2)} / {u.traffic_gb} GB
-                  </td>
-                  <td className="p-3">{new Date(u.expires_at).toLocaleDateString()}</td>
-                  <td className="p-3">{u.active ? 'Yes' : 'No'}</td>
-                  <td className="p-3 text-right space-x-2">
-                    <Link
-                      to={`/users/${u.id}`}
-                      className="text-emerald-400 hover:underline"
-                    >
-                      Details
-                    </Link>
-                    <button
-                      onClick={() => setLinkUserId(u.id)}
-                      className="text-sky-400 hover:underline"
-                    >
-                      Link
-                    </button>
-                    <button
-                      onClick={() => setEditUser(u)}
-                      className="text-slate-300 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteUser(u.id)}
-                      className="text-red-400 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
+              {filtered.map((u) => {
+                const expired = new Date(u.expires_at).getTime() <= now;
+                return (
+                  <tr key={u.id} className={expired ? 'opacity-80' : undefined}>
+                    <td>
+                      <Link to={`/users/${u.id}`} className="font-medium text-slate-100 hover:text-sky-300">
+                        {u.email}
+                      </Link>
+                    </td>
+                    <td>
+                      <TrafficBar used={u.used_gb} limit={u.traffic_gb} />
+                    </td>
+                    <td className="whitespace-nowrap text-slate-300">
+                      {new Date(u.expires_at).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <StatusBadge active={u.active} expired={expired} />
+                    </td>
+                    <td className="text-right whitespace-nowrap space-x-3">
+                      <Link to={`/users/${u.id}`} className="text-emerald-400 hover:underline text-sm">
+                        Details
+                      </Link>
+                      <button type="button" onClick={() => setLinkUserId(u.id)} className="link-action">
+                        Link
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditUser(u)}
+                        className="text-slate-300 hover:underline text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteUser(u.id)}
+                        className="text-red-400 hover:underline text-sm"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-slate-500">
-                    No users yet
+                  <td colSpan={5}>
+                    <EmptyState
+                      title={users.length === 0 ? 'No users yet' : 'No matches'}
+                      description={
+                        users.length === 0
+                          ? 'Create a user to issue subscription and client links.'
+                          : 'Try a different email filter.'
+                      }
+                    />
                   </td>
                 </tr>
               )}
@@ -112,50 +153,45 @@ export function Users() {
       )}
 
       {showAdd && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold mb-4">Add user</h2>
-            <UserForm
-              submitLabel="Create"
-              onCancel={() => setShowAdd(false)}
-              onSubmit={async (data) => {
-                await api.post('/users', {
-                  email: data.email,
-                  traffic_gb: data.traffic_gb,
-                  expire_days: data.expire_days,
-                });
-                setShowAdd(false);
-                fetchUsers();
-              }}
-            />
-          </div>
-        </div>
+        <Modal title="Add user" onClose={() => setShowAdd(false)}>
+          <UserForm
+            submitLabel="Create"
+            onCancel={() => setShowAdd(false)}
+            onSubmit={async (data) => {
+              await api.post('/users', {
+                email: data.email,
+                traffic_gb: data.traffic_gb,
+                expire_days: data.expire_days,
+              });
+              setShowAdd(false);
+              fetchUsers();
+            }}
+          />
+        </Modal>
       )}
 
       {editUser && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold mb-4">Edit user</h2>
-            <UserForm
-              initial={{
-                email: editUser.email,
-                traffic_gb: editUser.traffic_gb,
-                expire_days: 30,
-                active: editUser.active,
-              }}
-              onCancel={() => setEditUser(null)}
-              onSubmit={async (data) => {
-                await api.put(`/users/${editUser.id}`, {
-                  email: data.email,
-                  traffic_gb: data.traffic_gb,
-                  active: data.active,
-                });
-                setEditUser(null);
-                fetchUsers();
-              }}
-            />
-          </div>
-        </div>
+        <Modal title="Edit user" onClose={() => setEditUser(null)}>
+          <UserForm
+            initial={{
+              email: editUser.email,
+              traffic_gb: editUser.traffic_gb,
+              expire_days: 30,
+              active: editUser.active,
+            }}
+            showExpireDays={false}
+            onCancel={() => setEditUser(null)}
+            onSubmit={async (data) => {
+              await api.put(`/users/${editUser.id}`, {
+                email: data.email,
+                traffic_gb: data.traffic_gb,
+                active: data.active,
+              });
+              setEditUser(null);
+              fetchUsers();
+            }}
+          />
+        </Modal>
       )}
 
       {linkUserId !== null && (

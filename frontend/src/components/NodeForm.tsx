@@ -42,7 +42,7 @@ export function NodeForm({ initial, submitLabel, onCancel, onSubmit }: Props) {
           public_key: publicKey || undefined,
           short_id: shortId || undefined,
           sni: sni || undefined,
-          flow: network === 'tcp' ? (flow || undefined) : undefined,
+          flow: network === 'tcp' ? flow || undefined : undefined,
           security: security || undefined,
           network: network || undefined,
           fingerprint: credentialFields.fingerprint ?? 'firefox',
@@ -55,53 +55,181 @@ export function NodeForm({ initial, submitLabel, onCancel, onSubmit }: Props) {
         });
       }
       await onSubmit({
-        name, address, port, role, protocol, region: region || undefined, priority, active,
+        name,
+        address,
+        port,
+        role,
+        protocol,
+        region: region || undefined,
+        priority,
+        active,
         credentials: stringifyCredentials(credentialFields),
       });
-    } catch { setError('Failed to save node'); } finally { setSaving(false); }
+    } catch {
+      setError('Failed to save node');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Name" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" data-testid="node-name" />
-      <select value={role} onChange={(e) => setRole(e.target.value as NodeRole)} className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" data-testid="node-role">
-        <option value="entry">Entry</option><option value="exit">Exit</option>
-      </select>
-      <input value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="Address" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" data-testid="node-address" />
-      <input type="number" value={port} onChange={(e) => setPort(Number(e.target.value))} required placeholder="Port" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" data-testid="node-port" />
-      <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Region" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" />
-      <select value={protocol} onChange={(e) => setProtocol(e.target.value)} className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm">
-        <option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option>
-      </select>
-      <input type="number" value={priority} onChange={(e) => setPriority(Number(e.target.value))} placeholder="Priority" className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700 text-sm" />
-      <label className="flex items-center gap-2"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /><span className="text-sm">Active</span></label>
-      <details open={role === 'exit'}><summary className="text-sm cursor-pointer">Credentials</summary>
-        <input value={uuid} onChange={(e) => setUuid(e.target.value)} placeholder="Relay UUID (EU inbound user)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-        <input value={publicKey} onChange={(e) => setPublicKey(e.target.value)} placeholder="EU Reality public key (pbk)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-        <input value={shortId} onChange={(e) => setShortId(e.target.value)} placeholder="EU Reality short ID" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-        {role === 'exit' && (
-          <>
-            <input value={sni} onChange={(e) => setSni(e.target.value)} placeholder="SNI (EU serverNames, e.g. www.cloudflare.com)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" data-testid="node-sni" />
-            <select value={security} onChange={(e) => setSecurity(e.target.value)} className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs">
-              <option value="reality">reality</option>
-              <option value="tls">tls</option>
-              <option value="none">none</option>
-            </select>
-            <select value={network} onChange={(e) => setNetwork(e.target.value)} className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs">
-              <option value="tcp">tcp (Vision)</option>
-              <option value="xhttp">xhttp</option>
-            </select>
-            {network === 'tcp' && (
-              <input value={flow} onChange={(e) => setFlow(e.target.value)} placeholder="flow (xtls-rprx-vision)" className="w-full mt-2 px-2 py-1.5 rounded bg-slate-800 text-xs font-mono" />
-            )}
-            <p className="mt-2 text-xs text-slate-400">SNI must match EU inbound Reality serverNames — not rio2skadi.pro.</p>
-          </>
-        )}
+      {error && <p className="alert-error">{error}</p>}
+      <div>
+        <label className="label">Name</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="input"
+          data-testid="node-name"
+        />
+      </div>
+      <div>
+        <label className="label">Role</label>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as NodeRole)}
+          className="input"
+          data-testid="node-role"
+        >
+          <option value="entry">Entry</option>
+          <option value="exit">Exit</option>
+        </select>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">Address</label>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+            className="input"
+            data-testid="node-address"
+          />
+        </div>
+        <div>
+          <label className="label">Port</label>
+          <input
+            type="number"
+            value={port}
+            onChange={(e) => setPort(Number(e.target.value))}
+            required
+            className="input"
+            data-testid="node-port"
+          />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">Region</label>
+          <input
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            placeholder="RU / NL / …"
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="label">Priority</label>
+          <input
+            type="number"
+            value={priority}
+            onChange={(e) => setPriority(Number(e.target.value))}
+            className="input"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="label">Protocol</label>
+        <select
+          value={protocol}
+          onChange={(e) => setProtocol(e.target.value)}
+          className="input"
+        >
+          <option value="vless">VLESS</option>
+          <option value="vmess">VMess</option>
+          <option value="trojan">Trojan</option>
+        </select>
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={(e) => setActive(e.target.checked)}
+          className="rounded border-surface-border"
+        />
+        Active
+      </label>
+      <details open={role === 'exit'} className="rounded-xl border border-surface-border p-3">
+        <summary className="text-sm cursor-pointer text-slate-300">Credentials</summary>
+        <div className="mt-3 space-y-2">
+          <input
+            value={uuid}
+            onChange={(e) => setUuid(e.target.value)}
+            placeholder="Relay UUID (EU inbound user)"
+            className="input font-mono text-xs"
+          />
+          <input
+            value={publicKey}
+            onChange={(e) => setPublicKey(e.target.value)}
+            placeholder="EU Reality public key (pbk)"
+            className="input font-mono text-xs"
+          />
+          <input
+            value={shortId}
+            onChange={(e) => setShortId(e.target.value)}
+            placeholder="EU Reality short ID"
+            className="input font-mono text-xs"
+          />
+          {role === 'exit' && (
+            <>
+              <input
+                value={sni}
+                onChange={(e) => setSni(e.target.value)}
+                placeholder="SNI (EU serverNames, e.g. www.cloudflare.com)"
+                className="input font-mono text-xs"
+                data-testid="node-sni"
+              />
+              <select
+                value={security}
+                onChange={(e) => setSecurity(e.target.value)}
+                className="input text-xs"
+              >
+                <option value="reality">reality</option>
+                <option value="tls">tls</option>
+                <option value="none">none</option>
+              </select>
+              <select
+                value={network}
+                onChange={(e) => setNetwork(e.target.value)}
+                className="input text-xs"
+              >
+                <option value="tcp">tcp (Vision)</option>
+                <option value="xhttp">xhttp</option>
+              </select>
+              {network === 'tcp' && (
+                <input
+                  value={flow}
+                  onChange={(e) => setFlow(e.target.value)}
+                  placeholder="flow (xtls-rprx-vision)"
+                  className="input font-mono text-xs"
+                />
+              )}
+              <p className="text-xs text-slate-400">
+                SNI must match EU inbound Reality serverNames — not rio2skadi.pro.
+              </p>
+            </>
+          )}
+        </div>
       </details>
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-slate-400">Cancel</button>
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded bg-sky-600 text-sm">{saving ? 'Saving…' : submitLabel}</button>
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onCancel} className="btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" disabled={saving} className="btn-primary">
+          {saving ? 'Saving…' : submitLabel}
+        </button>
       </div>
     </form>
   );

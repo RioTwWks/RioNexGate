@@ -10,7 +10,7 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setApiKey(key);
+    setApiKey(key.trim());
     try {
       await api.get('/users');
       window.location.href = '/';
@@ -23,29 +23,49 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-70"
+        style={{
+          background:
+            'radial-gradient(circle at 20% 20%, rgba(56,189,248,0.18), transparent 40%), radial-gradient(circle at 80% 70%, rgba(52,211,153,0.1), transparent 35%)',
+        }}
+      />
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-lg p-6 space-y-4"
+        className="relative w-full max-w-md card p-8 space-y-5 shadow-glow animate-fade-up"
       >
-        <h1 className="text-xl font-semibold text-center text-sky-400">RioNexGate</h1>
-        <p className="text-sm text-slate-400 text-center">Enter your API key to continue</p>
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-        <input
-          type="password"
-          required
-          placeholder="API key"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2 rounded bg-sky-600 hover:bg-sky-500 disabled:opacity-50"
-        >
+        <div className="text-center space-y-2">
+          <p className="text-xs uppercase tracking-[0.25em] text-sky-400/80">Proxy control plane</p>
+          <h1 className="text-3xl font-semibold text-sky-300">RioNexGate</h1>
+          <p className="text-sm text-surface-muted">Enter your API key to continue</p>
+        </div>
+
+        {error && <p className="alert-error text-center">{error}</p>}
+
+        <div>
+          <label className="label" htmlFor="api-key">
+            API key
+          </label>
+          <input
+            id="api-key"
+            type="password"
+            required
+            autoFocus
+            placeholder="server.api_key from config.yaml"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="input font-mono"
+          />
+        </div>
+
+        <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
           {loading ? 'Checking...' : 'Login'}
         </button>
+
+        <p className="text-xs text-center text-slate-500">
+          Auth header: <span className="font-mono text-slate-400">X-API-Key</span>
+        </p>
       </form>
     </div>
   );
