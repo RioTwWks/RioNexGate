@@ -48,8 +48,9 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.APIKeyAuth(cfg.Server.APIKey))
+			r.Use(middleware.APIKeyAuthDynamic(cfg))
 			r.Get("/protocols", h.ListProtocols)
+			r.Post("/security/rotate-api-key", h.RotateAPIKey)
 			r.Get("/users", h.ListUsers)
 			r.Post("/users", h.CreateUser)
 			r.Get("/users/{id}", h.GetUser)
@@ -63,6 +64,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 			r.Get("/users/{id}/invites", h.ListUserInvites)
 			r.Post("/users/{id}/invites", h.CreateUserInvite)
 			r.Delete("/users/{id}/invites/{inviteId}", h.RevokeUserInvite)
+			r.Post("/users/{id}/subscription-link", h.MintUserSubscriptionLink)
 			r.Put("/users/{id}/chain", h.UpdateUserChain)
 			r.Get("/nodes", h.ListNodes)
 			r.Post("/nodes", h.CreateNode)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/ui';
-import api from '../services/api';
+import api, { rotateApiKey, setApiKey } from '../services/api';
 
 const CORES = [
   {
@@ -62,15 +62,75 @@ export function Settings() {
     }
   };
 
+  const [newKeyPreview, setNewKeyPreview] = useState('');
+  const [rotating, setRotating] = useState(false);
+
+  const rotateKey = async () => {
+    if (
+      !confirm(
+        'Generate and apply a new API key? The current key stops working immediately. Copy the new key after rotation.',
+      )
+    ) {
+      return;
+    }
+    setRotating(true);
+    setMessage('');
+    setError('');
+    setNewKeyPreview('');
+    try {
+      const key = await rotateApiKey();
+      setApiKey(key);
+      setNewKeyPreview(key);
+      setMessage('API key rotated. Stored in this browser; copy it for other clients.');
+    } catch {
+      setError('Failed to rotate API key');
+    } finally {
+      setRotating(false);
+    }
+  };
+
   return (
     <div className="page max-w-3xl">
       <PageHeader
         title="Settings"
-        subtitle="Active proxy core and configuration reload"
+        subtitle="Active proxy core, API key, and configuration reload"
       />
 
       {message && <p className="alert-ok">{message}</p>}
       {error && <p className="alert-error">{error}</p>}
+
+      <section className="card-pad space-y-4">
+        <div>
+          <p className="text-sm font-medium text-slate-200 mb-1">Panel API key</p>
+          <p className="text-xs text-slate-500 mb-3">
+            Rotates <code className="text-xs">server.api_key</code> in config.yaml and applies it live.
+          </p>
+          <button
+            type="button"
+            disabled={loading || rotating}
+            onClick={rotateKey}
+            className="btn-secondary"
+            data-testid="rotate-api-key"
+          >
+            {rotating ? 'Rotating…' : 'Rotate API key'}
+          </button>
+          {newKeyPreview && (
+            <div className="mt-3 space-y-2" data-testid="new-api-key">
+              <input readOnly value={newKeyPreview} className="input font-mono text-xs" />
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(newKeyPreview);
+                  setMessage('New API key copied');
+                }}
+              >
+                Copy new key
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="card-pad space-y-5">
         <div>

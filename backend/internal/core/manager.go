@@ -226,6 +226,7 @@ func (m *manager) collectStats() {
 		log.Printf("stats: list users: %v", err)
 		return
 	}
+	reload := false
 	for _, user := range users {
 		up, down, err := m.fetchUserStats(user.Email)
 		if err != nil {
@@ -240,6 +241,20 @@ func (m *manager) collectStats() {
 			continue
 		}
 		_ = m.db.RecordTraffic(user.ID, up, down)
+		user.UsedBytes = total
+		if m.cfg.AutoDeactivateOnQuotaEnabled() && user.Active && user.IsQuotaExceeded() {
+			if err := m.db.SetUserActive(user.ID, false); err != nil {
+				log.Printf("stats: deactivate user %d: %v", user.ID, err)
+				continue
+			}
+			log.Printf("user %d deactivated: traffic quota exceeded", user.ID)
+			reload = true
+		}
+	}
+	if reload {
+		if err := m.Reload(); err != nil {
+			log.Printf("stats: reload after quota deactivation: %v", err)
+		}
 	}
 }
 

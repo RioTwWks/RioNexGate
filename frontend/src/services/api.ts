@@ -149,4 +149,23 @@ export async function updateUserChain(userId: number, chain: { entry_node_id?: n
   const payload: Record<string, unknown> = {}; if (chain.clear) payload.clear = true; else { if (chain.entry_node_id !== undefined) payload.entry_node_id = chain.entry_node_id; if (chain.exit_node_id !== undefined) payload.exit_node_id = chain.exit_node_id; }
   const res = await api.put<User>(`/users/${userId}/chain`, payload); return res.data;
 }
+
+export async function rotateApiKey(newKey?: string): Promise<string> {
+  const res = await api.post<{ api_key: string }>('/security/rotate-api-key', {
+    new_key: newKey || '',
+  });
+  return res.data.api_key;
+}
+
+export async function mintSubscriptionLink(
+  userId: number,
+  ttlHours = 168,
+): Promise<{ url: string; expires_at: string; ttl_hours: number }> {
+  const res = await api.post<{ url: string; expires_at: string; ttl_hours: number }>(
+    `/users/${userId}/subscription-link`,
+    { ttl_hours: ttlHours },
+  );
+  return res.data;
+}
+
 export default api;

@@ -242,6 +242,8 @@ Before exposing the panel beyond localhost:
 8. Firewall Xray/sing-box/Skadi ports; keep stats API on loopback (`api_listen`)
 9. Encrypt backups: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
 10. Ensure `./data` is owned by uid `1000` (backend non-root user)
+11. Rotate API key from Settings after first install; prefer signed subscription links
+12. Set `require_subscription_sig: true` if clients can use signed URLs only
 
 Hardening plan: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md).
 

@@ -242,6 +242,8 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 8. Firewall портов ядер; stats API на loopback (`api_listen`)
 9. Шифровать бэкапы: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
 10. `./data` принадлежит uid `1000` (non-root backend)
+11. Ротация API key в Settings; для шаринга — signed subscription link
+12. При возможности `require_subscription_sig: true`
 
 План hardening: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md).
 

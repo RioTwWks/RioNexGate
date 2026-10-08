@@ -12,6 +12,13 @@ server:
   # cors_origins: ["http://localhost:8888", "http://127.0.0.1:8888"]
   # Serve /api/docs and /api/openapi.yaml (disable on internet-facing hosts).
   enable_docs: true
+  # Optional separate HMAC secret for signed subscription URLs (default: api_key).
+  # subscription_sig_secret: ""
+  subscription_default_ttl_hours: 168
+  # When true, bare /api/subscription/{token} without exp+sig is rejected.
+  require_subscription_sig: false
+  # Set active=false when traffic quota is exceeded (and reload core).
+  auto_deactivate_on_quota: true
 
 database:
   path: "./data/rionexgate.db"
