@@ -214,10 +214,27 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
    ```bash
    cp nginx/nginx-https.conf.example nginx/nginx.conf
    ```
-4. В `docker-compose.yml` раскомментируйте порт `HTTPS_PORT` (по умолчанию `8443`).
+4. В `docker-compose.yml` раскомментируйте порт `HTTPS_PORT` (host → контейнер **8443**; nginx без root).
 5. `make up` — панель на `https://panel.example.com:8443`.
 
 Подробности в комментариях [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.example) и [`scripts/letsencrypt.sh`](scripts/letsencrypt.sh).
+
+## Чек-лист безопасности (production)
+
+Перед публикацией панели за пределы localhost:
+
+1. Сильный `server.api_key` (мин. 16 символов; плейсхолдеры отклоняются) — `make init` генерирует ключ
+2. Предпочтительно HTTPS (`nginx-https.conf.example` + Let's Encrypt)
+3. `allow_open_register: false`; для register — `X-API-Key` или `registration_secret`
+4. `allow_private_probes: false`, если не нужен LAN multihop health-check
+5. `enable_docs: false` на публичных хостах
+6. Ограничить `cors_origins` URL панели
+7. Не публиковать `8080`/`3000` наружу (в compose только `127.0.0.1`)
+8. Firewall портов ядер; stats API на loopback (`api_listen`)
+9. Шифровать бэкапы: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
+10. `./data` принадлежит uid `1000` (non-root backend)
+
+План hardening: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md).
 
 ## CI и E2E-тесты
 
@@ -383,6 +400,10 @@ RioNexGate/
 ```bash
 ./scripts/backup.sh
 ./scripts/restore.sh backups/rionexgate-data-YYYYMMDD_HHMMSS.tar.gz
+
+# Опционально age (https://github.com/FiloSottile/age):
+AGE_RECIPIENT=age1... ./scripts/backup.sh
+AGE_IDENTITY=~/.config/age/key.txt ./scripts/restore.sh backups/rionexgate-data-....tar.gz.age
 ```
 
 ## Устранение неполадок
@@ -394,14 +415,17 @@ RioNexGate/
 | `KeyError: 'id'` (compose) | Удалить `docker-compose` v1, использовать `docker compose` v2 |
 | Порт 80 занят | Используйте `HTTP_PORT=8888` в `.env` |
 | 401 в панели | Неверный API key; Logout или очистить `rionexgate_api_key` в localStorage |
+| `api_key is missing or insecure` | Задайте длинный случайный `server.api_key` (или `make init` на свежем конфиге) |
+| backend не пишет в `./data` | `sudo chown -R 1000:1000 data` |
 | `make dev` не видит docker | Перелогиниться после `usermod`; `make` использует `sg docker` как fallback |
-| xray stats не работают | `make dev-cores`, проверить `core.xray.api_address` |
+| xray stats не работают | `make dev-cores`; при необходимости задайте `core.xray.api_listen` |
 
 Диагностика: `make docker-doctor`
 
 ## Документация для разработчиков
 
 - План MVP: [`.cursor/plans/mvp.md`](.cursor/plans/mvp.md)
+- Hardening: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md)
 - Статус: [`.cursor/STATUS.md`](.cursor/STATUS.md)
 
 ## Лицензия

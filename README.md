@@ -214,10 +214,27 @@ Example TLS setup for nginx:
    ```bash
    cp nginx/nginx-https.conf.example nginx/nginx.conf
    ```
-4. In `docker-compose.yml`, uncomment `HTTPS_PORT` (default `8443`).
+4. In `docker-compose.yml`, uncomment `HTTPS_PORT` (maps host → container **8443**; nginx runs non-root).
 5. `make up` — panel at `https://panel.example.com:8443`.
 
 See comments in [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.example) and [`scripts/letsencrypt.sh`](scripts/letsencrypt.sh).
+
+## Production security checklist
+
+Before exposing the panel beyond localhost:
+
+1. Strong `server.api_key` (min 16 chars; placeholders are rejected at startup) — `make init` generates one
+2. Prefer HTTPS (`nginx-https.conf.example` + Let's Encrypt)
+3. Keep `allow_open_register: false`; use `X-API-Key` or `registration_secret` for device register
+4. Keep `allow_private_probes: false` unless you need LAN multihop health checks
+5. Set `enable_docs: false` on internet-facing hosts
+6. Restrict `cors_origins` to your panel URL(s)
+7. Do not publish host ports `8080`/`3000` publicly (compose binds them to `127.0.0.1` only)
+8. Firewall Xray/sing-box/Skadi ports; keep stats API on loopback (`api_listen`)
+9. Encrypt backups: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
+10. Ensure `./data` is owned by uid `1000` (backend non-root user)
+
+Hardening plan: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md).
 
 ## CI and E2E tests
 
@@ -384,6 +401,10 @@ RioNexGate/
 ```bash
 ./scripts/backup.sh
 ./scripts/restore.sh backups/rionexgate-data-YYYYMMDD_HHMMSS.tar.gz
+
+# Optional age encryption (https://github.com/FiloSottile/age):
+AGE_RECIPIENT=age1... ./scripts/backup.sh
+AGE_IDENTITY=~/.config/age/key.txt ./scripts/restore.sh backups/rionexgate-data-....tar.gz.age
 ```
 
 ## Troubleshooting
@@ -395,14 +416,17 @@ RioNexGate/
 | `KeyError: 'id'` (compose) | Remove `docker-compose` v1, use `docker compose` v2 |
 | Port 80 busy | Use `HTTP_PORT=8888` in `.env` |
 | 401 in panel | Wrong API key; Logout or clear `rionexgate_api_key` in localStorage |
+| `api_key is missing or insecure` | Set a long random `server.api_key` (or re-run `make init` on a fresh config) |
+| backend cannot write `./data` | `sudo chown -R 1000:1000 data` (container user) |
 | `make dev` cannot access docker | Re-login after `usermod`; `make` falls back to `sg docker` |
-| xray stats not working | `make dev-cores`, check `core.xray.api_address` |
+| xray stats not working | `make dev-cores`; set `core.xray.api_listen` if bridge cannot reach loopback |
 
 Diagnostics: `make docker-doctor`
 
 ## Developer documentation
 
 - MVP plan: [`.cursor/plans/mvp.md`](.cursor/plans/mvp.md)
+- Security hardening: [`.cursor/plans/security-hardening.md`](.cursor/plans/security-hardening.md)
 - Status: [`.cursor/STATUS.md`](.cursor/STATUS.md)
 
 ## License

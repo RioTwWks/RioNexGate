@@ -1,4 +1,4 @@
-# HTTPS example for rionexgate nginx reverse proxy.
+# HTTPS example for rionexgate nginx reverse proxy (non-root, ports 8080/8443).
 #
 # Usage:
 #   1. Obtain certificates (see scripts/letsencrypt.sh)
@@ -7,14 +7,23 @@
 #        privkey.pem
 #   3. Replace nginx/nginx.conf with this file OR merge the ssl server block.
 #   4. Uncomment HTTPS port in docker-compose.yml (HTTPS_PORT, default 8443)
+#      Host mapping is host:8443 -> container:8443 (non-root listen).
 #
 # HTTP requests are redirected to HTTPS.
+
+pid /tmp/nginx.pid;
 
 events {
     worker_connections 1024;
 }
 
 http {
+    client_body_temp_path /tmp/client_temp;
+    proxy_temp_path       /tmp/proxy_temp;
+    fastcgi_temp_path     /tmp/fastcgi_temp;
+    uwsgi_temp_path       /tmp/uwsgi_temp;
+    scgi_temp_path        /tmp/scgi_temp;
+
     limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
 
     upstream backend {
@@ -22,18 +31,19 @@ http {
     }
 
     upstream frontend {
-        server frontend:80;
+        server frontend:8080;
     }
 
     # Redirect HTTP -> HTTPS
     server {
-        listen 80;
+        listen 8080;
         server_name _;
         return 301 https://$host$request_uri;
     }
 
     server {
-        listen 443 ssl http2;
+        listen 8443 ssl;
+        http2 on;
         server_name _;
 
         ssl_certificate     /etc/nginx/ssl/fullchain.pem;
