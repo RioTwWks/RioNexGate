@@ -7,6 +7,9 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
+// maxJSONBody caps JSON request bodies (DoS / memory abuse).
+const maxJSONBody = 1 << 20 // 1 MiB
+
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

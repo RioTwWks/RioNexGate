@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"rionexgate/internal/db"
 	"rionexgate/internal/models"
@@ -43,8 +42,11 @@ func userAccessForbidden(user *models.User) (forbidden bool, msg string) {
 	if !user.Active {
 		return true, "user inactive"
 	}
-	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
+	if user.IsExpired() {
 		return true, "user expired"
+	}
+	if user.IsQuotaExceeded() {
+		return true, "traffic quota exceeded"
 	}
 	return false, ""
 }

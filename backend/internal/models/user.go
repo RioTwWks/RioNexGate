@@ -15,3 +15,25 @@ type User struct {
 	ExitNodeID        *uint     `json:"exit_node_id,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 }
+
+// IsExpired reports whether the account past expires_at (zero means no expiry).
+func (u *User) IsExpired() bool {
+	if u == nil || u.ExpiresAt.IsZero() {
+		return false
+	}
+	return !u.ExpiresAt.After(time.Now())
+}
+
+// IsQuotaExceeded reports whether used_bytes reached the traffic_gb limit (0 = unlimited).
+func (u *User) IsQuotaExceeded() bool {
+	if u == nil || u.TrafficGB <= 0 {
+		return false
+	}
+	limit := u.TrafficGB * 1024 * 1024 * 1024
+	return u.UsedBytes >= limit
+}
+
+// AccessAllowed is true when the user may use proxy/client APIs.
+func (u *User) AccessAllowed() bool {
+	return u != nil && u.Active && !u.IsExpired() && !u.IsQuotaExceeded()
+}

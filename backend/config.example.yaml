@@ -6,6 +6,12 @@ server:
   # registration_secret: "long-random-registration-secret"
   # DANGEROUS: unauthenticated POST /api/client/register (LAN/dev only).
   allow_open_register: false
+  # Allow stealth test-dest / node health against private/loopback IPs (LAN multihop).
+  allow_private_probes: false
+  # Browser CORS origins (default: localhost panel). Use ["*"] only if intentional.
+  # cors_origins: ["http://localhost:8888", "http://127.0.0.1:8888"]
+  # Serve /api/docs and /api/openapi.yaml (disable on internet-facing hosts).
+  enable_docs: true
 
 database:
   path: "./data/rionexgate.db"

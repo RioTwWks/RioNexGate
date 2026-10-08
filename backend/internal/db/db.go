@@ -18,13 +18,14 @@ type DB struct {
 }
 
 func Open(path string) (*DB, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return nil, err
 	}
 	gdb, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
+	_ = os.Chmod(path, 0o600)
 	return &DB{gdb}, nil
 }
 
@@ -190,7 +191,16 @@ func (d *DB) ListActiveUsers() ([]models.User, error) {
 	// Include users with zero/null expires_at (no expiry) or future expiry.
 	err := d.Where("active = ? AND (expires_at IS NULL OR expires_at <= ? OR expires_at > ?)",
 		true, time.Time{}, now).Find(&users).Error
-	return users, err
+	if err != nil {
+		return nil, err
+	}
+	out := users[:0]
+	for _, u := range users {
+		if !u.IsQuotaExceeded() {
+			out = append(out, u)
+		}
+	}
+	return out, nil
 }
 
 func (d *DB) UpdateUserUsedBytes(id uint, usedBytes int64) error {

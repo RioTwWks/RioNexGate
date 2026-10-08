@@ -10,7 +10,9 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates wget
 WORKDIR /app
 COPY --from=builder /app/rionexgate .
-COPY --from=builder /app/config.example.yaml ./config.yaml
+# Example only — mount a real config.yaml with a strong api_key at runtime.
+COPY --from=builder /app/config.example.yaml ./config.example.yaml
+ENV CONFIG_PATH=/app/config.yaml
 EXPOSE 8080
 HEALTHCHECK CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["./rionexgate"]

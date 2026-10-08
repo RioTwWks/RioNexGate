@@ -19,8 +19,9 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 	r.Use(middleware.AccessLogger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.APIVersioning)
+	r.Use(middleware.MaxBytes(maxJSONBody))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   corsOrigins(cfg),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key", "X-Device-Token", "X-Registration-Secret", "X-API-Version"},
 		ExposedHeaders:   []string{"X-API-Version", "X-Config-Cached"},
@@ -29,8 +30,10 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", h.Health)
-		r.Get("/docs", h.SwaggerUI)
-		r.Get("/openapi.yaml", h.OpenAPISpec)
+		if cfg.DocsEnabled() {
+			r.Get("/docs", h.SwaggerUI)
+			r.Get("/openapi.yaml", h.OpenAPISpec)
+		}
 		r.Get("/subscription/{token}", h.GetSubscription)
 
 		r.Route("/client", func(r chi.Router) {
@@ -77,4 +80,16 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 	})
 
 	return r
+}
+
+func corsOrigins(cfg *config.Config) []string {
+	if cfg == nil || len(cfg.Server.CORSOrigins) == 0 {
+		return []string{
+			"http://localhost:8888",
+			"http://127.0.0.1:8888",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		}
+	}
+	return cfg.Server.CORSOrigins
 }

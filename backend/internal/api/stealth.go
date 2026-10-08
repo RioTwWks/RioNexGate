@@ -1,11 +1,16 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
+
 	"rionexgate/internal/config"
+	"rionexgate/internal/netutil"
 )
 
 type TransportPresetDTO struct { Enabled bool `json:"enabled"`; Port int `json:"port"` }
@@ -108,26 +113,61 @@ func (h *Handler) UpdateStealthSettings(w http.ResponseWriter, r *http.Request) 
 }
 func (h *Handler) TestStealthDest(w http.ResponseWriter, r *http.Request) {
 	var req DestTestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json"); return
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json")
+		return
 	}
 	dest := strings.TrimSpace(req.Dest)
-	if dest == "" { writeError(w, http.StatusBadRequest, "dest is required"); return }
-	if !strings.Contains(dest, ":") { dest += ":443" }
-	host := dest
-	if idx := strings.Index(dest, ":"); idx > 0 { host = dest[:idx] }
+	if dest == "" {
+		writeError(w, http.StatusBadRequest, "dest is required")
+		return
+	}
+	if !strings.Contains(dest, ":") {
+		dest += ":443"
+	}
+	host, _, err := net.SplitHostPort(dest)
+	if err != nil {
+		host = dest
+		if idx := strings.Index(dest, ":"); idx > 0 {
+			host = dest[:idx]
+		}
+	}
+	allowPrivate := h.cfg.Server.AllowPrivateProbes
+	if err := netutil.ValidateHost(r.Context(), host, allowPrivate); err != nil {
+		writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error()})
+		return
+	}
 	start := time.Now()
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+				hname, portStr, err := net.SplitHostPort(address)
+				if err != nil {
+					return nil, err
+				}
+				var port int
+				fmt.Sscanf(portStr, "%d", &port)
+				return netutil.DialTCP(ctx, hname, port, allowPrivate, 10*time.Second)
+			},
+		},
+	}
 	url := "https://" + host
 	reqHTTP, err := http.NewRequestWithContext(r.Context(), http.MethodHead, url, nil)
-	if err != nil { writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error()}); return }
+	if err != nil {
+		writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error()})
+		return
+	}
 	resp, err := client.Do(reqHTTP)
 	latency := time.Since(start).Milliseconds()
 	if err != nil {
 		reqHTTP, _ = http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
 		resp, err = client.Do(reqHTTP)
 		latency = time.Since(start).Milliseconds()
-		if err != nil { writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error(), LatencyMS: latency}); return }
+		if err != nil {
+			writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error(), LatencyMS: latency})
+			return
+		}
 	}
 	defer resp.Body.Close()
 	writeJSON(w, http.StatusOK, DestTestResponse{Reachable: true, StatusCode: resp.StatusCode, LatencyMS: latency})

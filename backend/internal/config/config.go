@@ -26,6 +26,14 @@ type ServerConfig struct {
 	RegistrationSecret string `mapstructure:"registration_secret"`
 	// AllowOpenRegister enables unauthenticated device registration (insecure; LAN/dev only).
 	AllowOpenRegister bool `mapstructure:"allow_open_register"`
+	// AllowPrivateProbes permits SSRF-sensitive probes (stealth test-dest, node health)
+	// against loopback/private/link-local addresses. Needed for LAN multihop; keep false on public hosts.
+	AllowPrivateProbes bool `mapstructure:"allow_private_probes"`
+	// CORSOrigins lists allowed browser origins. Empty defaults to localhost panel URLs.
+	// Set to ["*"] only if you intentionally allow any origin.
+	CORSOrigins []string `mapstructure:"cors_origins"`
+	// EnableDocs serves /api/docs and /api/openapi.yaml (default true).
+	EnableDocs *bool `mapstructure:"enable_docs"`
 }
 
 type DatabaseConfig struct {
@@ -256,7 +264,32 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.Server.EnableDocs == nil {
+		t := true
+		cfg.Server.EnableDocs = &t
+	}
+	if len(cfg.Server.CORSOrigins) == 0 {
+		cfg.Server.CORSOrigins = []string{
+			"http://localhost:8888",
+			"http://127.0.0.1:8888",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		}
+	}
+
 	return &cfg, nil
+}
+
+// DocsEnabled reports whether OpenAPI/Swagger routes should be registered.
+// Nil EnableDocs defaults to true (Load also sets this explicitly).
+func (c *Config) DocsEnabled() bool {
+	if c == nil {
+		return false
+	}
+	if c.Server.EnableDocs == nil {
+		return true
+	}
+	return *c.Server.EnableDocs
 }
 
 // insecureAPIKeys are placeholders that must never be used in a running panel.
