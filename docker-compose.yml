@@ -82,7 +82,8 @@ services:
 
   sing-box:
     profiles: ["cores"]
-    image: ghcr.io/sagernet/sing-box:latest
+    # Pin version (avoid :latest). Override with SINGBOX_IMAGE if needed.
+    image: ${SINGBOX_IMAGE:-ghcr.io/sagernet/sing-box:v1.14.2}
     pull_policy: if_not_present
     volumes:
       - ./data/sing-box:/etc/sing-box

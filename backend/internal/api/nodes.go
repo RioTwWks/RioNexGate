@@ -3,13 +3,12 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net"
 	"net/http"
 	"time"
 
 	"rionexgate/internal/db"
 	"rionexgate/internal/models"
+	"rionexgate/internal/netutil"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -172,20 +171,18 @@ func (h *Handler) CheckNodeHealth(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "node not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, checkNodeTCP(r.Context(), node.Address, node.Port))
+	writeJSON(w, http.StatusOK, checkNodeTCP(r.Context(), node.Address, node.Port, h.cfg.Server.AllowPrivateProbes))
 }
 
-func checkNodeTCP(ctx context.Context, address string, port int) NodeHealthResponse {
+func checkNodeTCP(ctx context.Context, address string, port int, allowPrivate bool) NodeHealthResponse {
 	if address == "" {
 		return NodeHealthResponse{CheckType: "tcp", Error: "address is empty"}
 	}
 	if port <= 0 || port > 65535 {
 		return NodeHealthResponse{CheckType: "tcp", Error: "invalid port"}
 	}
-	target := net.JoinHostPort(address, fmt.Sprintf("%d", port))
-	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	start := time.Now()
-	conn, err := dialer.DialContext(ctx, "tcp", target)
+	conn, err := netutil.DialTCP(ctx, address, port, allowPrivate, 5*time.Second)
 	latency := time.Since(start).Milliseconds()
 	if err != nil {
 		return NodeHealthResponse{CheckType: "tcp", Error: err.Error(), LatencyMS: latency}

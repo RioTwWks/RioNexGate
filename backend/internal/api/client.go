@@ -91,14 +91,15 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
-	if !user.Active {
+	if !user.AccessAllowed() {
 		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
-		writeError(w, http.StatusForbidden, "user inactive")
-		return
-	}
-	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
-		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
-		writeError(w, http.StatusForbidden, "user expired")
+		msg := "user inactive"
+		if user.IsExpired() {
+			msg = "user expired"
+		} else if user.IsQuotaExceeded() {
+			msg = "traffic quota exceeded"
+		}
+		writeError(w, http.StatusForbidden, msg)
 		return
 	}
 
@@ -280,12 +281,14 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "subscription not found")
 		return
 	}
-	if !user.Active {
-		writeError(w, http.StatusForbidden, "subscription inactive")
-		return
-	}
-	if !user.ExpiresAt.IsZero() && !user.ExpiresAt.After(time.Now()) {
-		writeError(w, http.StatusForbidden, "subscription expired")
+	if !user.AccessAllowed() {
+		msg := "subscription inactive"
+		if user.IsExpired() {
+			msg = "subscription expired"
+		} else if user.IsQuotaExceeded() {
+			msg = "traffic quota exceeded"
+		}
+		writeError(w, http.StatusForbidden, msg)
 		return
 	}
 

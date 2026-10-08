@@ -1,9 +1,9 @@
 # RioNexGate — план доработок безопасности и hardening
 
-**Статус:** в работе (P0)  
+**Статус:** P0+P1 done; P2 частично  
 **Контекст:** аудит MVP (2026-10-08). Панель — single-admin self-hosted; дефолтный деплой небезопасен для internet-facing.
 
-Связано с: [.cursor/plans/mvp.md](mvp.md)
+Связано с: [.cursor/plans/mvp.md](mvp.md) · PR: https://github.com/RioTwWks/RioNexGate/pull/30
 
 ---
 
@@ -18,9 +18,9 @@ flowchart TD
 
 | Фаза | Цель | Состояние |
 |------|------|-----------|
-| **P0** | Закрыть угон доступа и утечку секретов в дефолте | сделано (этот PR) |
-| **P1** | Enforce лимитов, SSRF/injection, nginx | частично (ExpiresAt, JSON-escape, nginx headers/limit) |
-| **P2** | Контейнеры, CORS, deps, бэкапы | бэклог |
+| **P0** | Закрыть угон доступа и утечку секретов в дефолте | сделано |
+| **P1** | Enforce лимитов, SSRF/injection, nginx | сделано |
+| **P2** | Контейнеры, CORS, deps, бэкапы | частично |
 | **P3** | Invite-токены, ротация ключей, OpenAPI auth | бэклог |
 
 ---
@@ -64,7 +64,7 @@ flowchart TD
 ### P1.1 Enforce `ExpiresAt` (и опционально квоты)
 - [x] `ListActiveUsers`: `active AND (expires_at IS zero OR expires_at > now)`
 - [x] Device auth / subscription: reject expired
-- [ ] (позже) auto-disable при превышении `TrafficGB`
+- [x] Quota: `TrafficGB` enforced for access + exclude from active core users
 
 ### P1.2 JSON-escape в шаблонах ядер
 - [x] `jsonString` / `jsonStringList` через `encoding/json`
@@ -74,20 +74,24 @@ flowchart TD
 - [x] `limit_req` на `/api/`
 
 ### P1.4 SSRF-ограничения
-- [ ] Блок private/link-local для `test-dest` и node health (opt-out для LAN)
+- [x] Блок private/link-local/metadata для `test-dest` и node health
+- [x] Opt-in `server.allow_private_probes` для LAN multihop
+- [x] Dial по конкретному IP (анти DNS-rebinding)
 
 ---
 
-## P2 — Hardening (бэклог)
+## P2 — Hardening
 
-- [ ] CORS: явный origin вместо `*`
+- [x] CORS: явные origins (localhost panel + Vite); `cors_origins` в конфиге
+- [x] Не класть default `config.yaml` в образ (только `config.example.yaml`)
+- [x] SQLite `0600`; backup archive `0600` + warning
+- [x] MaxBytesReader 1 MiB на body
+- [x] axios bump; npm audit fix (остались breaking: vite/react-router major)
+- [x] `server.enable_docs` (default true; выключать в prod)
 - [ ] Non-root containers, `cap_drop: ALL`, `no-new-privileges`, `read_only` где возможно
-- [ ] Pin `sing-box` / amneziawg image digests
-- [ ] Не класть default `config.yaml` в образ (только example)
-- [ ] Шифрование бэкапов; SQLite `0600`
-- [ ] MaxBytesReader на JSON body
-- [ ] Обновить axios / npm audit
-- [ ] Закрыть или защитить `/api/docs` в prod (`server.enable_docs`)
+- [x] Pin `sing-box` tag (v1.14.2; override via `SINGBOX_IMAGE`)
+- [ ] Pin amneziawg image digest / tag (не `:latest`)
+- [ ] Шифрование бэкапов (age/gpg helper)
 
 ---
 
