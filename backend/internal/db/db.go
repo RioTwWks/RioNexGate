@@ -208,6 +208,10 @@ func (d *DB) UpdateUserUsedBytes(id uint, usedBytes int64) error {
 	return d.Model(&models.User{}).Where("id = ?", id).Update("used_bytes", usedBytes).Error
 }
 
+func (d *DB) SetUserActive(id uint, active bool) error {
+	return d.Model(&models.User{}).Where("id = ?", id).Update("active", active).Error
+}
+
 func (d *DB) RecordTraffic(userID uint, up, down int64) error {
 	return d.Create(&models.Traffic{
 		UserID:     userID,

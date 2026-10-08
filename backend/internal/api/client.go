@@ -46,18 +46,7 @@ type StatsRequest struct {
 }
 
 func (h *Handler) subscriptionURL(r *http.Request, token string) string {
-	base := h.cfg.Server.PublicBaseURL
-	if base == "" {
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-		if fwd := r.Header.Get("X-Forwarded-Proto"); fwd != "" {
-			scheme = fwd
-		}
-		base = scheme + "://" + r.Host
-	}
-	return base + "/api/subscription/" + token
+	return h.publicBase(r) + "/api/subscription/" + token
 }
 
 func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
@@ -326,6 +315,16 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	if token == "" {
 		writeError(w, http.StatusBadRequest, "token is required")
 		return
+	}
+
+	exp := r.URL.Query().Get("exp")
+	sig := r.URL.Query().Get("sig")
+	requireSig := h.cfg.Server.RequireSubscriptionSig
+	if requireSig || exp != "" || sig != "" {
+		if err := verifySubscriptionSig(token, exp, sig, h.cfg.SubscriptionHMACSecret()); err != nil {
+			writeError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
 	}
 
 	user, err := h.db.GetUserBySubscriptionToken(token)

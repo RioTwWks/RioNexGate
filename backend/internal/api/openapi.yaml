@@ -526,6 +526,59 @@ paths:
       responses:
         "200":
           description: Reload triggered
+  /security/rotate-api-key:
+    post:
+      summary: Rotate panel API key (persists to config.yaml, hot-swap)
+      tags: [Security]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_key:
+                  type: string
+                  description: Optional; generated if empty
+      responses:
+        "200":
+          description: New API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api_key:
+                    type: string
+  /users/{id}/subscription-link:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    post:
+      summary: Mint a time-limited signed subscription URL
+      tags: [Users]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ttl_hours:
+                  type: integer
+                  default: 168
+      responses:
+        "200":
+          description: Signed URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  ttl_hours:
+                    type: integer
 components:
   securitySchemes:
     ApiKeyAuth:

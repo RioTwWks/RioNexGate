@@ -6,6 +6,7 @@ import {
   getUserDevices,
   getUserInvites,
   getUserProfiles,
+  mintSubscriptionLink,
   revokeDevice,
   revokeUserInvite,
 } from '../services/api';
@@ -35,6 +36,10 @@ export function UserDetail({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedSigned, setCopiedSigned] = useState(false);
+  const [signedURL, setSignedURL] = useState('');
+  const [signedExpires, setSignedExpires] = useState('');
+  const [mintingSigned, setMintingSigned] = useState(false);
   const [copiedProfile, setCopiedProfile] = useState<string | null>(null);
   const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
@@ -71,6 +76,23 @@ export function UserDetail({ userId }: Props) {
     await navigator.clipboard.writeText(user.subscription_url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleMintSigned = async () => {
+    setMintingSigned(true);
+    setError('');
+    try {
+      const link = await mintSubscriptionLink(userId, 168);
+      setSignedURL(link.url);
+      setSignedExpires(link.expires_at);
+      await navigator.clipboard.writeText(link.url);
+      setCopiedSigned(true);
+      setTimeout(() => setCopiedSigned(false), 2000);
+    } catch {
+      setError('Failed to mint signed subscription link');
+    } finally {
+      setMintingSigned(false);
+    }
   };
 
   const handleRevoke = async (deviceId: number) => {
@@ -201,6 +223,34 @@ export function UserDetail({ userId }: Props) {
                 Token: <span className="font-mono">{maskToken(user.subscription_token)}</span>
               </p>
             )}
+            <div className="pt-2 border-t border-surface-border space-y-2">
+              <p className="text-xs text-slate-500">
+                Prefer a time-limited signed link for sharing (HMAC, default 7 days).
+              </p>
+              <button
+                type="button"
+                onClick={handleMintSigned}
+                disabled={mintingSigned}
+                className="btn-secondary"
+                data-testid="mint-signed-subscription"
+              >
+                {mintingSigned
+                  ? 'Minting…'
+                  : copiedSigned
+                    ? 'Signed link copied!'
+                    : 'Copy signed link (7d)'}
+              </button>
+              {signedURL && (
+                <div className="space-y-1">
+                  <input readOnly value={signedURL} className="input font-mono text-xs" />
+                  {signedExpires && (
+                    <p className="text-xs text-slate-500">
+                      Expires {new Date(signedExpires).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-slate-500 text-sm">

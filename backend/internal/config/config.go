@@ -14,6 +14,9 @@ type Config struct {
 	Core     CoreConfig     `mapstructure:"core"`
 	Telegram TelegramConfig `mapstructure:"telegram"`
 	Limits   LimitsConfig   `mapstructure:"limits"`
+
+	// path is the loaded CONFIG_PATH (not from YAML).
+	path string
 }
 
 type ServerConfig struct {
@@ -34,6 +37,14 @@ type ServerConfig struct {
 	CORSOrigins []string `mapstructure:"cors_origins"`
 	// EnableDocs serves /api/docs and /api/openapi.yaml (default true).
 	EnableDocs *bool `mapstructure:"enable_docs"`
+	// SubscriptionSigSecret signs time-limited subscription URLs. Empty → use api_key.
+	SubscriptionSigSecret string `mapstructure:"subscription_sig_secret"`
+	// SubscriptionDefaultTTLHours is the default TTL for minted signed subscription links (0 = 168h).
+	SubscriptionDefaultTTLHours int `mapstructure:"subscription_default_ttl_hours"`
+	// RequireSubscriptionSig rejects bare /api/subscription/{token} without exp+sig.
+	RequireSubscriptionSig bool `mapstructure:"require_subscription_sig"`
+	// AutoDeactivateOnQuota sets user.active=false when traffic quota is exceeded (default true).
+	AutoDeactivateOnQuota *bool `mapstructure:"auto_deactivate_on_quota"`
 }
 
 type DatabaseConfig struct {
@@ -276,8 +287,72 @@ func Load() (*Config, error) {
 			"http://127.0.0.1:5173",
 		}
 	}
+	if cfg.Server.SubscriptionDefaultTTLHours <= 0 {
+		cfg.Server.SubscriptionDefaultTTLHours = 168
+	}
+	if cfg.Server.AutoDeactivateOnQuota == nil {
+		t := true
+		cfg.Server.AutoDeactivateOnQuota = &t
+	}
 
+	cfg.path = path
 	return &cfg, nil
+}
+
+// Path returns the config file path used by Load.
+func (c *Config) Path() string {
+	if c == nil {
+		return ""
+	}
+	return c.path
+}
+
+// SetPath sets the config file path (tests / programmatic use).
+func (c *Config) SetPath(path string) {
+	if c != nil {
+		c.path = path
+	}
+}
+
+// APIKey returns the current API key (safe for dynamic middleware).
+func (c *Config) APIKey() string {
+	if c == nil {
+		return ""
+	}
+	return c.Server.APIKey
+}
+
+// RotateAPIKey validates, persists, and hot-swaps the API key in memory.
+func (c *Config) RotateAPIKey(newKey string) error {
+	if c == nil {
+		return fmt.Errorf("nil config")
+	}
+	if err := ValidateAPIKey(newKey); err != nil {
+		return err
+	}
+	if c.path != "" {
+		if err := PersistAPIKey(c.path, newKey); err != nil {
+			return err
+		}
+	}
+	c.Server.APIKey = newKey
+	return nil
+}
+
+// SubscriptionHMACSecret is used to sign subscription URLs.
+func (c *Config) SubscriptionHMACSecret() string {
+	if c == nil {
+		return ""
+	}
+	if s := strings.TrimSpace(c.Server.SubscriptionSigSecret); s != "" {
+		return s
+	}
+	return c.Server.APIKey
+}
+
+// AutoDeactivateOnQuotaEnabled reports whether quota exhaustion should flip active=false.
+func (c *Config) AutoDeactivateOnQuotaEnabled() bool {
+	return c != nil && c.Server.AutoDeactivateOnQuota != nil && *c.Server.AutoDeactivateOnQuota
 }
 
 // DocsEnabled reports whether OpenAPI/Swagger routes should be registered.

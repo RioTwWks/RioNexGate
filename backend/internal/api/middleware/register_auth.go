@@ -29,7 +29,7 @@ func ResolveRegisterAuth(cfg *config.Config, database *db.DB, apiKey, regSecret,
 		log.Printf("warning: allow_open_register=true — unauthenticated device registration is enabled")
 		return &RegisterAuth{Mode: "open"}
 	}
-	if cfg != nil && SecureEqual(apiKey, cfg.Server.APIKey) {
+	if cfg != nil && SecureEqual(apiKey, cfg.APIKey()) {
 		return &RegisterAuth{Mode: "api_key"}
 	}
 	if cfg != nil {
