@@ -1,6 +1,7 @@
 # RioNexGate — план доработок безопасности и hardening
 
-**Статус:** P0+P1 done; P2 частично  
+**Статус:** P0–P2 done; P3 бэклог  
+
 **Контекст:** аудит MVP (2026-10-08). Панель — single-admin self-hosted; дефолтный деплой небезопасен для internet-facing.
 
 Связано с: [.cursor/plans/mvp.md](mvp.md) · PR: https://github.com/RioTwWks/RioNexGate/pull/30
@@ -20,7 +21,7 @@ flowchart TD
 |------|------|-----------|
 | **P0** | Закрыть угон доступа и утечку секретов в дефолте | сделано |
 | **P1** | Enforce лимитов, SSRF/injection, nginx | сделано |
-| **P2** | Контейнеры, CORS, deps, бэкапы | частично |
+| **P2** | Контейнеры, CORS, deps, бэкапы | сделано |
 | **P3** | Invite-токены, ротация ключей, OpenAPI auth | бэклог |
 
 ---
@@ -88,10 +89,11 @@ flowchart TD
 - [x] MaxBytesReader 1 MiB на body
 - [x] axios bump; npm audit fix (остались breaking: vite/react-router major)
 - [x] `server.enable_docs` (default true; выключать в prod)
-- [ ] Non-root containers, `cap_drop: ALL`, `no-new-privileges`, `read_only` где возможно
+- [x] Non-root backend/frontend/nginx; `read_only` + `tmpfs`; `no-new-privileges`; `cap_drop: ALL`
 - [x] Pin `sing-box` tag (v1.14.2; override via `SINGBOX_IMAGE`)
-- [ ] Pin amneziawg image digest / tag (не `:latest`)
-- [ ] Шифрование бэкапов (age/gpg helper)
+- [x] Pin amneziawg tag `3.1.20260828`; drop `SYS_MODULE`; `cap_drop: ALL` + `NET_ADMIN`
+- [x] Шифрование бэкапов через `age` (`AGE_RECIPIENT` / `AGE_IDENTITY`)
+- [x] Security checklist в README (prod deploy)
 
 ---
 
@@ -100,8 +102,7 @@ flowchart TD
 - [ ] Per-user invite / one-time registration tokens
 - [ ] Ротация API key из UI
 - [ ] Подписка: короткий TTL / signed URL (уже есть token URL — усилить)
-- [ ] Авто-отключение по трафику
-- [ ] Security checklist в README (prod deploy)
+- [ ] Авто-отключение по трафику (quota уже режет доступ; UI/auto `active=false` — отдельно)
 
 ---
 

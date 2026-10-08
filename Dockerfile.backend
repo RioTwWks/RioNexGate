@@ -7,12 +7,17 @@ COPY backend/ .
 RUN CGO_ENABLED=1 GOOS=linux go build -o rionexgate ./cmd/main.go
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates wget
+RUN apk --no-cache add ca-certificates wget \
+  && addgroup -g 1000 -S rionex \
+  && adduser -u 1000 -S -G rionex -h /app rionex \
+  && mkdir -p /app/data \
+  && chown -R rionex:rionex /app
 WORKDIR /app
-COPY --from=builder /app/rionexgate .
+COPY --from=builder --chown=rionex:rionex /app/rionexgate .
 # Example only — mount a real config.yaml with a strong api_key at runtime.
-COPY --from=builder /app/config.example.yaml ./config.example.yaml
+COPY --from=builder --chown=rionex:rionex /app/config.example.yaml ./config.example.yaml
 ENV CONFIG_PATH=/app/config.yaml
+USER 1000:1000
 EXPOSE 8080
 HEALTHCHECK CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["./rionexgate"]
