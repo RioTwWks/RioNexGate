@@ -4,6 +4,10 @@ RUN apk add --no-cache wget \
   && chown -R nginx:nginx /var/cache/nginx /var/run /var/log/nginx /etc/nginx/ssl \
   && touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 COPY --chown=nginx:nginx nginx/nginx.conf /etc/nginx/nginx.conf
+# Skip stock docker-entrypoint.d on read-only rootfs.
 USER nginx
 EXPOSE 8080 8443
-HEALTHCHECK CMD wget -qO- http://127.0.0.1:8080/ || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8080/ || exit 1
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]

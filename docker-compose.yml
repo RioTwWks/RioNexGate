@@ -38,8 +38,12 @@ services:
       dockerfile: Dockerfile.frontend
     user: "101:101"
     read_only: true
+    # nginx needs writable cache/run even with temp paths under /tmp
     tmpfs:
       - /tmp
+      - /var/cache/nginx
+      - /var/run
+      - /run
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -55,6 +59,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 5s
 
   nginx:
     image: rionexgate-nginx:latest
@@ -65,6 +70,9 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /var/cache/nginx
+      - /var/run
+      - /run
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -87,6 +95,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 5s
 
   xray-core:
     profiles: ["cores"]
