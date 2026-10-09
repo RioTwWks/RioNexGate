@@ -36,7 +36,18 @@ func buildVLESSLink(host string, port int, user models.User) string {
 		user.UUID, host, port, params.Encode(), fragment)
 }
 
-func buildVLESSRealityXHTTPLink(host string, port int, user models.User, stealth *config.StealthConfig) string {
+func profileRemark(base, suffix string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = "profile"
+	}
+	if suffix == "" {
+		return url.PathEscape(base)
+	}
+	return url.PathEscape(base + "-" + suffix)
+}
+
+func buildVLESSRealityXHTTPLink(host string, port int, user models.User, stealth *config.StealthConfig, remarkBase string) string {
 	params := url.Values{}
 	params.Set("encryption", "none")
 	params.Set("type", "xhttp")
@@ -47,12 +58,14 @@ func buildVLESSRealityXHTTPLink(host string, port int, user models.User, stealth
 	params.Set("sid", stealth.PrimaryShortID())
 	params.Set("path", stealth.XHTTP.Path)
 	params.Set("mode", stealth.XHTTP.Mode)
-	fragment := url.PathEscape(user.Email + "-xhttp")
+	if remarkBase == "" {
+		remarkBase = user.Email
+	}
 	return fmt.Sprintf("vless://%s@%s:%d?%s#%s",
-		user.UUID, host, port, params.Encode(), fragment)
+		user.UUID, host, port, params.Encode(), profileRemark(remarkBase, "xhttp"))
 }
 
-func buildVLESSRealityVisionLink(host string, port int, user models.User, stealth *config.StealthConfig) string {
+func buildVLESSRealityVisionLink(host string, port int, user models.User, stealth *config.StealthConfig, remarkBase string) string {
 	params := url.Values{}
 	params.Set("encryption", "none")
 	params.Set("type", "tcp")
@@ -62,12 +75,14 @@ func buildVLESSRealityVisionLink(host string, port int, user models.User, stealt
 	params.Set("fp", stealth.FingerprintOrDefault())
 	params.Set("pbk", stealth.Reality.PublicKey)
 	params.Set("sid", stealth.PrimaryShortID())
-	fragment := url.PathEscape(user.Email + "-vision")
+	if remarkBase == "" {
+		remarkBase = user.Email
+	}
 	return fmt.Sprintf("vless://%s@%s:%d?%s#%s",
-		user.UUID, host, port, params.Encode(), fragment)
+		user.UUID, host, port, params.Encode(), profileRemark(remarkBase, "vision"))
 }
 
-func buildVLESSTLSLink(host string, port int, user models.User, stealth *config.StealthConfig) string {
+func buildVLESSTLSLink(host string, port int, user models.User, stealth *config.StealthConfig, remarkBase string) string {
 	params := url.Values{}
 	params.Set("encryption", "none")
 	params.Set("type", "tcp")
@@ -81,9 +96,11 @@ func buildVLESSTLSLink(host string, port int, user models.User, stealth *config.
 	if len(stealth.TLS.ALPN) > 0 {
 		params.Set("alpn", strings.Join(stealth.TLS.ALPN, ","))
 	}
-	fragment := url.PathEscape(user.Email + "-tls")
+	if remarkBase == "" {
+		remarkBase = user.Email
+	}
 	return fmt.Sprintf("vless://%s@%s:%d?%s#%s",
-		user.UUID, host, port, params.Encode(), fragment)
+		user.UUID, host, port, params.Encode(), profileRemark(remarkBase, "tls"))
 }
 
 func buildVMessLink(host string, port int, user models.User) string {
@@ -127,13 +144,13 @@ func primaryVLESSStealthLink(host string, port int, user models.User, stealth *c
 		return buildVLESSLink(host, port, user)
 	}
 	if stealth.Vision.Enabled {
-		return buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth)
+		return buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth, user.Email)
 	}
 	if stealth.XHTTP.Enabled {
-		return buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth)
+		return buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth, user.Email)
 	}
 	if stealth.TLS.Enabled {
-		return buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth)
+		return buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth, user.Email)
 	}
 	return buildVLESSLink(host, port, user)
 }
@@ -166,18 +183,23 @@ func GetClientLink(host string, port int, user models.User, protocol string, ste
 }
 
 // GetClientLinkProfiles returns all available stealth profiles for a user.
-func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer, multihop *config.MultihopConfig, exit *models.Node) []LinkProfile {
+// remarkBase overrides the URI fragment prefix (e.g. country label "NL"); empty uses email.
+func GetClientLinkProfiles(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer, multihop *config.MultihopConfig, exit *models.Node, remarkBase string) []LinkProfile {
+	if remarkBase == "" {
+		remarkBase = user.Email
+	}
 	if stealth == nil || (!stealth.IsActive() && !stealth.AWGActive()) {
 		return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}}
 	}
-	var profiles []LinkProfile; priority := 1
+	var profiles []LinkProfile
+	priority := 1
 	if stealth.IsActive() {
 		// Vision/TCP first: lowest latency for multihop and mobile; matches RU→EU relay transport.
 		if stealth.Vision.Enabled {
 			profiles = append(profiles, LinkProfile{
 				Profile: "vision-tcp-primary", Transport: "tcp", Priority: priority,
 				Port: stealth.Vision.Port, Tags: "vision-tcp-primary,low-latency",
-				Link: buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth),
+				Link: buildVLESSRealityVisionLink(host, stealth.Vision.Port, user, stealth, remarkBase),
 			})
 			priority++
 		}
@@ -185,7 +207,7 @@ func GetClientLinkProfiles(host string, port int, user models.User, stealth *con
 			profiles = append(profiles, LinkProfile{
 				Profile: "xhttp-anti-dpi", Transport: "xhttp", Priority: priority,
 				Port: stealth.XHTTP.Port, Tags: "xhttp-anti-dpi",
-				Link: buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth),
+				Link: buildVLESSRealityXHTTPLink(host, stealth.XHTTP.Port, user, stealth, remarkBase),
 			})
 			priority++
 		}
@@ -193,7 +215,7 @@ func GetClientLinkProfiles(host string, port int, user models.User, stealth *con
 			profiles = append(profiles, LinkProfile{
 				Profile: "tls-mobile", Transport: "tcp", Priority: priority,
 				Port: stealth.TLS.Port, Tags: "tls-mobile,mux-hint",
-				Link: buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth),
+				Link: buildVLESSTLSLink(host, stealth.TLS.Port, user, stealth, remarkBase),
 			})
 			priority++
 		}
@@ -206,6 +228,43 @@ func GetClientLinkProfiles(host string, port int, user models.User, stealth *con
 		return []LinkProfile{{Profile: "legacy-tcp", Transport: "tcp", Priority: 1, Port: port, Link: buildVLESSLink(host, port, user)}}
 	}
 	return omitXHTTPProfilesForMultihop(profiles, multihop, exit)
+}
+
+// GetClientLinkProfilesForExits emits transport profiles for each exit assignment so a
+// single subscription can list countries (NL, DE, …) as selectable servers.
+func GetClientLinkProfilesForExits(host string, port int, user models.User, stealth *config.StealthConfig, peer *models.WireGuardPeer, multihop *config.MultihopConfig, assignments []models.UserExitAssignment) []LinkProfile {
+	if len(assignments) == 0 {
+		return GetClientLinkProfiles(host, port, user, stealth, peer, multihop, nil, user.Email)
+	}
+	var all []LinkProfile
+	priority := 1
+	multi := len(assignments) > 1
+	for _, a := range assignments {
+		client := user
+		client.UUID = a.UserExit.UUID
+		client.Email = a.UserExit.Email
+		label := models.ExitDisplayLabel(a.Node)
+		remark := user.Email
+		if multi {
+			remark = label
+		}
+		exit := a.Node
+		profiles := GetClientLinkProfiles(host, port, client, stealth, peer, multihop, &exit, remark)
+		for _, p := range profiles {
+			p.Priority = priority
+			if multi {
+				if p.Tags != "" {
+					p.Tags = p.Tags + "," + models.ExitSlug(a.Node)
+				} else {
+					p.Tags = models.ExitSlug(a.Node)
+				}
+				p.Profile = models.ExitSlug(a.Node) + "-" + p.Profile
+			}
+			all = append(all, p)
+			priority++
+		}
+	}
+	return all
 }
 
 // omitXHTTPProfilesForMultihop removes XHTTP from client output when an entry→exit chain is active.

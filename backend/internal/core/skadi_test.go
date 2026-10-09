@@ -99,7 +99,7 @@ func TestGenerateSkadiConfigStealth(t *testing.T) {
 func TestAdaptProfilesForSkadi(t *testing.T) {
 	user := models.User{UUID: "b831381d-6324-4d53-ad4f-8cda48b30811", Email: "u@test.com"}
 	stealth := testStealthConfig()
-	xrayProfiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil)
+	xrayProfiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil, "")
 	if len(xrayProfiles) < 2 {
 		t.Fatalf("expected xray stealth profiles, got %d", len(xrayProfiles))
 	}

@@ -818,13 +818,14 @@ Entry-узлы отделяют `core.public_host` от клиентского e
 
 1. Откройте страницу пользователя.
 2. Секция **Multi-hop chain** (`UserChainSection`):
-   - Мини-диаграмма топологии обновляется при смене выбора.
-   - **Auto entry** / **Auto exit** — пустое значение → активный узел с наименьшим priority.
-   - **Save chain** → `PUT /api/users/{id}/chain`.
+   - Мини-диаграмма топологии обновляется при смене entry / exits.
+   - **Auto entry** — пустое значение → активный entry с наименьшим priority.
+   - **Exit countries** — мультивыбор стран; порядок = приоритет в подписке (первый сохраняет UUID пользователя).
+   - **Save chain** → `PUT /api/users/{id}/chain` с `exit_node_ids`.
 
 ### Порядок разрешения (код)
 
-`ResolveUserExitNode` (`db/nodes.go`):
+`ListUserExitAssignments` / `ResolveUserExitNode` (`db/user_exits.go`, `db/nodes.go`):
 
 1. Если задан `user.exit_node_id` → загрузить узел; вернуть, если активен и роль `exit`.
 2. Иначе → `GetBestExitNode()` (активный exit с наименьшим priority).
@@ -839,9 +840,11 @@ curl -s -X PUT http://localhost:8888/api/users/1/chain \
   -H "Content-Type: application/json" \
   -d '{
     "entry_node_id": 1,
-    "exit_node_id": 2
+    "exit_node_ids": [2, 3]
   }'
 ```
+
+Устаревший одиночный exit всё ещё работает: `"exit_node_id": 2` (эквивалент `exit_node_ids: [2]`).
 
 Пример ответа:
 
@@ -856,11 +859,14 @@ curl -s -X PUT http://localhost:8888/api/users/1/chain \
   "active": true,
   "entry_node_id": 1,
   "exit_node_id": 2,
+  "exit_node_ids": [2, 3],
   "created_at": "2026-09-08T08:00:00Z",
   "subscription_token": "abc123...",
   "subscription_url": "http://ru.example.com:8888/api/subscription/abc123..."
 }
 ```
+
+В подписке появятся Vision-профили с метками стран (`#NL-vision`, `#DE-vision`) и отдельным UUID/email на каждый exit — entry маршрутизирует страны независимо.
 
 ### API — авто-режим (сброс явных привязок)
 
@@ -1261,7 +1267,7 @@ curl -s -H "X-API-Key: YOUR_KEY" http://localhost:8888/api/users/1 | jq '{email,
 | **TCP-only health** | `/api/nodes/{id}/health` не проверяет VLESS, UUID или Reality handshake. |
 | **UI credentials fields** | Форма узла показывает только UUID, public key, short ID. Полный JSON (flow, network, path) — через API. |
 | **Stats on sing-box** | Сбор статистики трафика только для Xray (`fetchUserStats`). |
-| **Single routing domain** | Нет split routing по доменам в multihop — весь трафик пользователя через один exit. |
+| **Нет split по доменам** | Multihop маршрутизирует по email клиента, не по destination. Одному пользователю можно привязать **несколько exit** (`exit_node_ids`); каждая страна — отдельный inbound / сервер в подписке. |
 
 ---
 

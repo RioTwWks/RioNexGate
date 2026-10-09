@@ -149,7 +149,7 @@ func adaptProfilesForSkadi(host string, listenPort int, user models.User, stealt
 		out = append(out, LinkProfile{
 			Profile: "skadi-xhttp", Transport: "xhttp", Priority: priority,
 			Port: port, Tags: "skadi,xhttp-anti-dpi",
-			Link: buildVLESSRealityXHTTPLink(host, port, user, stealth),
+			Link: buildVLESSRealityXHTTPLink(host, port, user, stealth, user.Email),
 		})
 		priority++
 	}

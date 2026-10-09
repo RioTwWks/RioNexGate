@@ -38,10 +38,14 @@ func (d *DB) AutoMigrate() error {
 		&models.Invite{},
 		&models.ClientStatsReport{},
 		&models.WireGuardPeer{},
+		&models.UserExit{},
 	); err != nil {
 		return err
 	}
-	return d.BackfillSubscriptionTokens()
+	if err := d.BackfillSubscriptionTokens(); err != nil {
+		return err
+	}
+	return d.BackfillUserExits()
 }
 
 func (d *DB) SeedDefaultNode() error {
@@ -161,6 +165,14 @@ func (d *DB) UpdateUser(id uint, in UpdateUserInput) (*models.User, error) {
 			return nil, err
 		}
 	}
+	if in.ClearChain {
+		_ = d.ClearUserExits(id)
+	} else if in.ExitNodeID != nil {
+		// Keep junction table in sync when a single exit_node_id is set via legacy API.
+		if _, err := d.SetUserExits(id, []uint{*in.ExitNodeID}); err != nil {
+			return nil, err
+		}
+	}
 	return d.GetUser(id)
 }
 
@@ -181,7 +193,12 @@ func (d *DB) DeleteUser(id uint) error {
 		if err := tx.Where("user_id = ?", id).Delete(&models.Device{}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("user_id = ?", id).Delete(&models.WireGuardPeer{}).Error; err != nil { return err }
+		if err := tx.Where("user_id = ?", id).Delete(&models.WireGuardPeer{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&models.UserExit{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&models.User{}, id).Error
 	})
 }

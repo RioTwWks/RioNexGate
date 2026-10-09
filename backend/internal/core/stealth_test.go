@@ -97,7 +97,7 @@ func TestGenerateStealthXrayConfig(t *testing.T) {
 func TestBuildVLESSRealityXHTTPLink(t *testing.T) {
 	user := models.User{UUID: "550e8400-e29b-41d4-a716-446655440000", Email: "test@example.com"}
 	stealth := testStealthConfig()
-	link := buildVLESSRealityXHTTPLink("proxy.example.com", 443, user, stealth)
+	link := buildVLESSRealityXHTTPLink("proxy.example.com", 443, user, stealth, user.Email)
 
 	u, err := url.Parse(link)
 	if err != nil {
@@ -128,7 +128,7 @@ func TestBuildVLESSRealityXHTTPLink(t *testing.T) {
 func TestBuildVLESSRealityVisionLink(t *testing.T) {
 	user := models.User{UUID: "550e8400-e29b-41d4-a716-446655440000", Email: "test@example.com"}
 	stealth := testStealthConfig()
-	link := buildVLESSRealityVisionLink("proxy.example.com", 8443, user, stealth)
+	link := buildVLESSRealityVisionLink("proxy.example.com", 8443, user, stealth, user.Email)
 
 	u, err := url.Parse(link)
 	if err != nil {
@@ -155,7 +155,7 @@ func TestBuildVLESSTLSLink(t *testing.T) {
 		SNI:     "tls.example.com",
 		ALPN:    []string{"h2", "http/1.1"},
 	}
-	link := buildVLESSTLSLink("proxy.example.com", 2053, user, stealth)
+	link := buildVLESSTLSLink("proxy.example.com", 2053, user, stealth, user.Email)
 
 	u, err := url.Parse(link)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestBuildVLESSTLSLink(t *testing.T) {
 func TestGetClientLinkProfiles(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
 	stealth := testStealthConfig()
-	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil)
+	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil, "")
 	if len(profiles) != 2 {
 		t.Fatalf("expected 2 profiles, got %d", len(profiles))
 	}
@@ -221,7 +221,7 @@ func TestBuildSubscriptionStealthOmitsLegacyProtocols(t *testing.T) {
 	if !strings.Contains(joined, "type=xhttp") {
 		t.Fatalf("expected xhttp profile in subscription: %s", joined)
 	}
-	if links[0] != buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig()) {
+	if links[0] != buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig(), user.Email) {
 		t.Fatalf("vision profile must be first in subscription")
 	}
 }
@@ -237,7 +237,7 @@ func TestGetClientLinkPrefersVisionOverXHTTP(t *testing.T) {
 
 func TestEncodeSubscription(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil, nil, nil)
+	profiles := GetClientLinkProfiles("host.example", 443, user, testStealthConfig(), nil, nil, nil, "")
 	encoded := EncodeSubscription(profiles)
 	if encoded == "" {
 		t.Fatal("empty subscription")

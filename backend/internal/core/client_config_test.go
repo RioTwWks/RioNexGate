@@ -89,7 +89,7 @@ func TestBuildClientConfigStealthOmitsLegacyServers(t *testing.T) {
 
 func TestVlessTransportParamsIncludesReality(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "user@test.com"}
-	link := buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig())
+	link := buildVLESSRealityVisionLink("host.example", 8443, user, testStealthConfig(), user.Email)
 	params := vlessTransportParams(link)
 	for _, key := range []string{"security", "flow", "sni", "fp", "pbk", "sid"} {
 		if params[key] == "" {
@@ -111,7 +111,7 @@ func TestVlessTransportParamsStripsFragmentWithEmail(t *testing.T) {
 	stealth := testStealthConfig()
 	stealth.Reality.ServerNames = []string{"www.bol.com"}
 	stealth.Reality.Dest = "www.bol.com:443"
-	link := buildVLESSRealityVisionLink("rio2skadi.ru", 8443, user, stealth)
+	link := buildVLESSRealityVisionLink("rio2skadi.ru", 8443, user, stealth, user.Email)
 	if !strings.Contains(link, "#test@test.test-vision") {
 		t.Fatalf("expected vision fragment in link, got %s", link)
 	}

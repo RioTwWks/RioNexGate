@@ -11,6 +11,8 @@ export interface User {
   subscription_url?: string;
   entry_node_id?: number;
   exit_node_id?: number;
+  /** Ordered exit countries for one subscription (primary first). */
+  exit_node_ids?: number[];
 }
 
 export interface StatsPoint {

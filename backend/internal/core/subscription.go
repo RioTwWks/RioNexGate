@@ -8,9 +8,16 @@ import (
 	"rionexgate/internal/models"
 )
 
-func BuildSubscriptionLinks(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) []string {
+func BuildSubscriptionLinks(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, exits []models.UserExitAssignment, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) []string {
 	ep := ResolveClientEndpoint(host, port, user, entry)
-	profiles := GetClientLinkProfiles(ep.Host, ep.Port, user, stealth, peer, multihop, exit)
+	var primaryExit *models.Node
+	if len(exits) == 1 {
+		primaryExit = &exits[0].Node
+	} else if len(exits) > 1 {
+		primaryExit = &exits[0].Node
+	}
+	_ = primaryExit
+	profiles := GetClientLinkProfilesForExits(ep.Host, ep.Port, user, stealth, peer, multihop, exits)
 	if IsSkadiCore(coreType) {
 		profiles = adaptProfilesForSkadi(ep.Host, ep.Port, user, stealth, profiles)
 	}
@@ -23,7 +30,9 @@ func BuildSubscriptionLinks(host string, port int, user models.User, stealth *co
 	// Plain VMess/Trojan links target legacy TCP inbounds only; with stealth they use the wrong
 	// port/security and cause client auto-fallback delays (high reported ping, failed connects).
 	// SkadiCore is VLESS-only for panel-managed inbounds.
-	if !IsSkadiCore(coreType) && LegacyProtocolsInSubscription(stealth) {
+	// Only append legacy protocols when there is a single (or no) exit — multi-exit subscriptions
+	// stay VLESS-profile only to avoid N×protocol noise.
+	if !IsSkadiCore(coreType) && LegacyProtocolsInSubscription(stealth) && len(exits) <= 1 {
 		for _, proto := range SupportedProtocols {
 			if proto == "vless" {
 				continue
@@ -36,12 +45,12 @@ func BuildSubscriptionLinks(host string, port int, user models.User, stealth *co
 	return links
 }
 
-func BuildSubscriptionBase64(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) string {
-	return base64.StdEncoding.EncodeToString([]byte(strings.Join(BuildSubscriptionLinks(host, port, user, stealth, entry, exit, multihop, peer, coreType), "\n")))
+func BuildSubscriptionBase64(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, exits []models.UserExitAssignment, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) string {
+	return base64.StdEncoding.EncodeToString([]byte(strings.Join(BuildSubscriptionLinks(host, port, user, stealth, entry, exits, multihop, peer, coreType), "\n")))
 }
 
-func BuildSubscriptionBase64Graceful(host string, port int, user models.User, stealth *config.StealthConfig, entry, exit *models.Node, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) string {
-	links := BuildSubscriptionLinks(host, port, user, stealth, entry, exit, multihop, peer, coreType)
+func BuildSubscriptionBase64Graceful(host string, port int, user models.User, stealth *config.StealthConfig, entry *models.Node, exits []models.UserExitAssignment, multihop *config.MultihopConfig, peer *models.WireGuardPeer, coreType string) string {
+	links := BuildSubscriptionLinks(host, port, user, stealth, entry, exits, multihop, peer, coreType)
 	if len(links) == 0 {
 		if IsSkadiCore(coreType) {
 			profiles := adaptProfilesForSkadi(host, port, user, stealth, nil)
