@@ -36,7 +36,7 @@ build: docker-check
 	$(DOCKER_COMPOSE) build
 
 up: docker-check
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) up -d --build
 
 down: docker-check
 	$(DOCKER_COMPOSE) down
