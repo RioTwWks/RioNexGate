@@ -48,6 +48,12 @@ core:
     api_token: "change-me-skadi-api-token"
     metrics_address: "127.0.0.1:9091"            # optional Prometheus /healthz
 
+  # Entry→exit chain (RU panel only). Exit hosts keep enabled: false.
+  # One user may bind several exits; subscription lists countries as servers.
+  multihop:
+    enabled: false
+    local_role: entry    # "entry" generates chain outbounds + email routing
+
   # Anti-DPI stealth presets (Reality + XHTTP / Vision / optional TLS).
   # Generate keypair: xray x25519  OR  skadicore genkey reality
   # (see README.md / README.ru.md and docs/stealth.md)

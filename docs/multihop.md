@@ -818,20 +818,22 @@ Entry nodes decouple `core.public_host` from the client-visible endpoint. Use th
 
 1. Open user detail page.
 2. **Multi-hop chain** section (`UserChainSection`):
-   - Mini topology diagram updates as you change selects.
-   - **Auto entry** / **Auto exit** — empty value → lowest priority active node.
-   - **Save chain** → `PUT /api/users/{id}/chain`.
+   - Mini topology diagram updates as you change entry / exits.
+   - **Auto entry** — empty value → lowest priority active entry.
+   - **Exit countries** — multi-select; order = subscription priority (first keeps panel UUID).
+   - **Save chain** → `PUT /api/users/{id}/chain` with `exit_node_ids`.
 
 ### Resolution order (code)
 
-`ResolveUserExitNode` (`db/nodes.go`):
+`ListUserExitAssignments` / `ResolveUserExitNode` (`db/user_exits.go`, `db/nodes.go`):
 
-1. If `user.exit_node_id` set → load node; return if active and role `exit`.
-2. Else → `GetBestExitNode()` (lowest priority active exit).
+1. Active rows in `user_exits` (ordered by priority) → each becomes a subscription country.
+2. Else if `user.exit_node_id` set → single legacy exit (auto-backfilled into `user_exits` on migrate).
+3. Else → `GetBestExitNode()` (lowest priority active exit).
 
 Same pattern for entry via `ResolveUserEntryNode`.
 
-### API — bind chain
+### API — bind chain (multi-exit)
 
 ```bash
 curl -s -X PUT http://localhost:8888/api/users/1/chain \
@@ -839,9 +841,11 @@ curl -s -X PUT http://localhost:8888/api/users/1/chain \
   -H "Content-Type: application/json" \
   -d '{
     "entry_node_id": 1,
-    "exit_node_id": 2
+    "exit_node_ids": [2, 3]
   }'
 ```
+
+Legacy single exit still works: `"exit_node_id": 2` (equivalent to `exit_node_ids: [2]`).
 
 Example response:
 
@@ -856,11 +860,14 @@ Example response:
   "active": true,
   "entry_node_id": 1,
   "exit_node_id": 2,
+  "exit_node_ids": [2, 3],
   "created_at": "2026-09-08T08:00:00Z",
   "subscription_token": "abc123...",
   "subscription_url": "http://ru.example.com:8888/api/subscription/abc123..."
 }
 ```
+
+Subscription then lists Vision profiles labeled by region (e.g. `#NL-vision`, `#DE-vision`) with a distinct UUID/email per exit so the entry core can route each country independently.
 
 ### API — auto mode (clear explicit bindings)
 
@@ -1261,7 +1268,7 @@ A: Enable multihop, register exit, assign users, reload. Client links unchanged 
 | **TCP-only health** | `/api/nodes/{id}/health` does not validate VLESS, UUID, or Reality handshake. |
 | **UI credentials fields** | Node form exposes UUID, public key, short ID only. Full JSON (flow, network, path) via API. |
 | **Stats on sing-box** | Traffic stats collector is Xray-only (`fetchUserStats`). |
-| **Single routing domain** | No per-domain split routing in multihop rules — entire user traffic uses one exit. |
+| **No per-domain split** | Multihop rules route by client email, not destination domain. One user may bind **multiple exits** (`exit_node_ids`); each country is a separate inbound identity / subscription server. |
 
 ---
 
@@ -1319,11 +1326,11 @@ curl -s -X POST http://localhost:8888/api/users \
   -H "Content-Type: application/json" \
   -d '{"email":"chain-test@example.com","traffic_gb":10,"expire_days":30}'
 
-# Assign chain (assume user id=3, entry=1, exit=2)
+# Assign chain (assume user id=3, entry=1, exits NL=2 DE=3)
 curl -s -X PUT http://localhost:8888/api/users/3/chain \
   -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"entry_node_id":1,"exit_node_id":2}'
+  -d '{"entry_node_id":1,"exit_node_ids":[2,3]}'
 ```
 
 ---

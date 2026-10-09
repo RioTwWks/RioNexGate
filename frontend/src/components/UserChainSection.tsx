@@ -109,24 +109,25 @@ export function UserChainSection({
               const checked = exitIds.includes(n.id);
               const order = checked ? exitIds.indexOf(n.id) + 1 : null;
               return (
-                <label
+                <div
                   key={n.id}
-                  className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-slate-900/60"
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-900/60"
                 >
                   <input
+                    id={`exit-node-${n.id}`}
                     type="checkbox"
                     data-testid={`exit-node-${n.id}`}
                     checked={checked}
                     onChange={() => toggleExit(n.id)}
                     className="rounded border-slate-600"
                   />
-                  <span className="flex-1 min-w-0">
+                  <label htmlFor={`exit-node-${n.id}`} className="flex-1 min-w-0 cursor-pointer">
                     <span className="font-medium">{n.region || n.name}</span>
                     <span className="text-slate-500 text-xs ml-1">
                       {n.name}
                       {!n.active ? ' · inactive' : ''}
                     </span>
-                  </span>
+                  </label>
                   {order != null && (
                     <span className="flex items-center gap-1 shrink-0">
                       <span className="text-[10px] uppercase tracking-wide text-slate-500">
@@ -136,10 +137,7 @@ export function UserChainSection({
                         type="button"
                         className="text-xs text-slate-400 hover:text-sky-400 px-1"
                         disabled={order === 1}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          moveExit(n.id, -1);
-                        }}
+                        onClick={() => moveExit(n.id, -1)}
                         aria-label="Move up"
                       >
                         ↑
@@ -148,17 +146,14 @@ export function UserChainSection({
                         type="button"
                         className="text-xs text-slate-400 hover:text-sky-400 px-1"
                         disabled={order === exitIds.length}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          moveExit(n.id, 1);
-                        }}
+                        onClick={() => moveExit(n.id, 1)}
                         aria-label="Move down"
                       >
                         ↓
                       </button>
                     </span>
                   )}
-                </label>
+                </div>
               );
             })}
           </div>
