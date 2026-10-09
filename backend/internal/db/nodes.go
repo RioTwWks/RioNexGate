@@ -181,6 +181,9 @@ func (d *DB) DeleteNode(id uint) error {
 		if err := tx.Model(&models.User{}).Where("exit_node_id = ?", id).Update("exit_node_id", nil).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("node_id = ?", id).Delete(&models.UserExit{}).Error; err != nil {
+			return err
+		}
 		res := tx.Delete(&models.Node{}, id)
 		if res.Error != nil {
 			return res.Error

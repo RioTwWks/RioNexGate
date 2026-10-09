@@ -71,30 +71,23 @@ func (m *manager) Reload() error {
 		return err
 	}
 
-	exitNodes, err := m.db.ListActiveNodesByRole(models.NodeRoleExit)
+	assignments, err := m.db.ListAllExitAssignmentsForActiveUsers(users)
 	if err != nil {
 		return err
 	}
-
-	resolveExit := func(user models.User) *models.Node {
-		node, err := m.db.ResolveUserExitNode(&user)
-		if err != nil {
-			return nil
-		}
-		return node
-	}
-	multihop := BuildMultihopData(&m.cfg.Core.Multihop, users, exitNodes, resolveExit)
+	multihop := BuildMultihopDataFromAssignments(&m.cfg.Core.Multihop, assignments)
+	inboundUsers := ExpandInboundUsers(users, assignments)
 
 	var data []byte
 	listenPort := m.cfg.Core.ListenPort
 	stealth := &m.cfg.Core.Stealth
 	switch m.Type() {
 	case "sing-box":
-		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, users, stealth, multihop)
+		data, err = generateSingboxConfig(listenPort, m.cfg.Core.Singbox.APIAddress, inboundUsers, stealth, multihop)
 	case "skadi":
-		data, err = generateSkadiConfig(listenPort, m.cfg.Core.Skadi, users, stealth)
+		data, err = generateSkadiConfig(listenPort, m.cfg.Core.Skadi, inboundUsers, stealth)
 	default:
-		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, m.cfg.Core.Xray.APIListen, users, stealth, multihop)
+		data, err = generateXrayConfig(listenPort, m.cfg.Core.Xray.APIAddress, m.cfg.Core.Xray.APIListen, inboundUsers, stealth, multihop)
 	}
 	if err != nil {
 		return err
@@ -107,7 +100,7 @@ func (m *manager) Reload() error {
 	if err := writeConfigAtomic(path, data); err != nil {
 		return err
 	}
-	log.Printf("core config written to %s (%d users)", path, len(users))
+	log.Printf("core config written to %s (%d panel users, %d inbound clients)", path, len(users), len(inboundUsers))
 	_ = m.reloadAWGConfig(users)
 	return nil
 }
@@ -173,12 +166,12 @@ func (m *manager) GetClientLinkProfiles(userID string) ([]LinkProfile, error) {
 		return nil, err
 	}
 	ep := m.clientEndpoint(*user)
-	exit, _ := m.db.ResolveUserExitNode(user)
+	exits, _ := m.db.ListUserExitAssignments(user.ID)
 	var peer *models.WireGuardPeer
 	if m.cfg.Core.Stealth.AWGActive() {
 		peer, _ = m.db.EnsureWireGuardPeer(user.ID, m.cfg.Core.Stealth.AWG.SubnetOrDefault())
 	}
-	profiles := GetClientLinkProfiles(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer, &m.cfg.Core.Multihop, exit)
+	profiles := GetClientLinkProfilesForExits(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, peer, &m.cfg.Core.Multihop, exits)
 	if IsSkadiCore(m.Type()) {
 		return adaptProfilesForSkadi(ep.Host, ep.Port, *user, &m.cfg.Core.Stealth, profiles), nil
 	}
@@ -228,8 +221,22 @@ func (m *manager) collectStats() {
 	}
 	reload := false
 	for _, user := range users {
-		up, down, err := m.fetchUserStats(user.Email)
-		if err != nil {
+		emails, err := m.db.ListUserExitEmails(user.ID)
+		if err != nil || len(emails) == 0 {
+			emails = []string{user.Email}
+		}
+		var up, down int64
+		got := false
+		for _, email := range emails {
+			u, d, err := m.fetchUserStats(email)
+			if err != nil {
+				continue
+			}
+			got = true
+			up += u
+			down += d
+		}
+		if !got {
 			continue
 		}
 		total := up + down

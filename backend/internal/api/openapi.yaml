@@ -649,6 +649,12 @@ components:
         exit_node_id:
           type: integer
           nullable: true
+          description: Primary exit node (first of exit_node_ids)
+        exit_node_ids:
+          type: array
+          items:
+            type: integer
+          description: Ordered exit countries bound to this user (one subscription)
         created_at:
           type: string
           format: date-time
@@ -774,6 +780,12 @@ components:
         exit_node_id:
           type: integer
           nullable: true
+          description: Legacy single exit; equivalent to exit_node_ids=[id]
+        exit_node_ids:
+          type: array
+          items:
+            type: integer
+          description: Multiple exits for country selection in one subscription
         clear:
           type: boolean
     TotalStats:

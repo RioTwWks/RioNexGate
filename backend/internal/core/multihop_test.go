@@ -24,6 +24,7 @@ func TestBuildMultihopDataGeneratesOutbounds(t *testing.T) {
 		Address:  "exit.eu.example",
 		Port:     8443,
 		Role:     models.NodeRoleExit,
+		Active:   true,
 		Protocol: "vless",
 		Credentials: `{"uuid":"relay-uuid","flow":"xtls-rprx-vision","security":"reality","public_key":"pk","short_id":"ab12"}`,
 	}
@@ -51,6 +52,7 @@ func TestGenerateMultihopXrayConfigWithUICredentials(t *testing.T) {
 		Address:     "exit.eu.example",
 		Port:        8443,
 		Role:        models.NodeRoleExit,
+		Active:      true,
 		Protocol:    "vless",
 		Credentials: `{"uuid":"relay-uuid","public_key":"pk","short_id":"ab12","sni":"www.cloudflare.com"}`,
 	}
@@ -88,6 +90,7 @@ func TestGenerateMultihopXrayConfig(t *testing.T) {
 		Address:  "exit.eu.example",
 		Port:     8443,
 		Role:     models.NodeRoleExit,
+		Active:   true,
 		Protocol: "vless",
 		Credentials: `{"uuid":"relay-uuid","flow":"xtls-rprx-vision","security":"reality","public_key":"pk","short_id":"ab12"}`,
 	}
@@ -132,6 +135,7 @@ func TestMultihopStealthIncludesUsersInAllInbounds(t *testing.T) {
 		Address:     "exit.eu.example",
 		Port:        8443,
 		Role:        models.NodeRoleExit,
+		Active:      true,
 		Protocol:    "vless",
 		Credentials: `{"uuid":"relay-uuid","flow":"xtls-rprx-vision","security":"reality","public_key":"pk","short_id":"ab12"}`,
 	}
@@ -247,7 +251,7 @@ func TestGetClientLinkProfilesOmitsXHTTPForMultihop(t *testing.T) {
 	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
 	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
 
-	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, multihop, exit)
+	profiles := GetClientLinkProfiles("host.example", 443, user, stealth, nil, multihop, exit, "")
 	if len(profiles) != 1 {
 		t.Fatalf("expected vision-only profile for multihop, got %d: %+v", len(profiles), profiles)
 	}
@@ -255,7 +259,7 @@ func TestGetClientLinkProfilesOmitsXHTTPForMultihop(t *testing.T) {
 		t.Fatalf("unexpected multihop profile: %+v", profiles[0])
 	}
 
-	withoutMultihop := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil)
+	withoutMultihop := GetClientLinkProfiles("host.example", 443, user, stealth, nil, nil, nil, "")
 	if len(withoutMultihop) != 2 {
 		t.Fatalf("expected vision+xhttp without multihop, got %d", len(withoutMultihop))
 	}
@@ -264,10 +268,14 @@ func TestGetClientLinkProfilesOmitsXHTTPForMultihop(t *testing.T) {
 func TestBuildSubscriptionOmitsXHTTPForMultihop(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "test@test.test"}
 	stealth := testStealthConfig()
-	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	exit := models.Node{Role: models.NodeRoleExit, Active: true}
 	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+	exits := []models.UserExitAssignment{{
+		UserExit: models.UserExit{UUID: user.UUID, Email: user.Email},
+		Node:     exit,
+	}}
 
-	links := BuildSubscriptionLinks("host.example", 443, user, stealth, nil, exit, multihop, nil, "xray")
+	links := BuildSubscriptionLinks("host.example", 443, user, stealth, nil, exits, multihop, nil, "xray")
 	if len(links) != 1 {
 		t.Fatalf("expected 1 subscription link for multihop, got %d: %v", len(links), links)
 	}
@@ -279,10 +287,14 @@ func TestBuildSubscriptionOmitsXHTTPForMultihop(t *testing.T) {
 func TestBuildClientConfigOmitsXHTTPProfilesForMultihop(t *testing.T) {
 	user := models.User{UUID: "uuid-1", Email: "test@test.test"}
 	stealth := testStealthConfig()
-	exit := &models.Node{Role: models.NodeRoleExit, Active: true}
+	exit := models.Node{Role: models.NodeRoleExit, Active: true}
 	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+	exits := []models.UserExitAssignment{{
+		UserExit: models.UserExit{UUID: user.UUID, Email: user.Email},
+		Node:     exit,
+	}}
 
-	cfg, err := BuildClientConfig("host.example", 443, user, 10808, stealth, nil, exit, multihop, nil, "xray")
+	cfg, err := BuildClientConfig("host.example", 443, user, 10808, stealth, nil, exits, multihop, nil, "xray")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,5 +303,82 @@ func TestBuildClientConfigOmitsXHTTPProfilesForMultihop(t *testing.T) {
 	}
 	if cfg.Servers[0].Params["type"] != "tcp" || cfg.Servers[0].Port != 8443 {
 		t.Fatalf("expected vision server params, got port=%d params=%+v", cfg.Servers[0].Port, cfg.Servers[0].Params)
+	}
+}
+
+func TestGetClientLinkProfilesForExitsMultiCountry(t *testing.T) {
+	user := models.User{ID: 1, UUID: "uuid-primary", Email: "user@example.com"}
+	stealth := testStealthConfig()
+	multihop := &config.MultihopConfig{Enabled: true, LocalRole: "entry"}
+	nl := models.Node{ID: 10, Name: "NL-AMS", Region: "NL", Role: models.NodeRoleExit, Active: true}
+	de := models.Node{ID: 11, Name: "DE-FRA", Region: "DE", Role: models.NodeRoleExit, Active: true}
+	assignments := []models.UserExitAssignment{
+		{UserExit: models.UserExit{UserID: 1, NodeID: 10, UUID: "uuid-primary", Email: "user@example.com", Priority: 100}, Node: nl},
+		{UserExit: models.UserExit{UserID: 1, NodeID: 11, UUID: "uuid-de", Email: "user@example.com/de", Priority: 200}, Node: de},
+	}
+
+	profiles := GetClientLinkProfilesForExits("entry.ru.example", 443, user, stealth, nil, multihop, assignments)
+	if len(profiles) != 2 {
+		t.Fatalf("expected 2 vision profiles (one per country), got %d: %+v", len(profiles), profiles)
+	}
+	for _, p := range profiles {
+		if p.Transport != "tcp" || strings.Contains(p.Link, "type=xhttp") {
+			t.Fatalf("multihop must be vision-only: %+v", p)
+		}
+	}
+	if !strings.Contains(profiles[0].Link, "#NL") && !strings.HasSuffix(profiles[0].Link, "NL") {
+		// fragment is URL-encoded country label
+		if !strings.Contains(profiles[0].Link, "NL") {
+			t.Fatalf("expected NL remark in first link: %s", profiles[0].Link)
+		}
+	}
+	if !strings.Contains(profiles[1].Link, "DE") {
+		t.Fatalf("expected DE remark in second link: %s", profiles[1].Link)
+	}
+	if profiles[0].Link == profiles[1].Link {
+		t.Fatal("profiles for different exits must differ (uuid/remark)")
+	}
+	if !strings.Contains(profiles[1].Link, "uuid-de") {
+		t.Fatalf("secondary exit must use its own UUID: %s", profiles[1].Link)
+	}
+}
+
+func TestExpandInboundUsersMultiExit(t *testing.T) {
+	users := []models.User{{ID: 1, UUID: "u1", Email: "a@b.c"}}
+	assignments := []models.UserExitAssignment{
+		{UserExit: models.UserExit{UserID: 1, UUID: "u1", Email: "a@b.c"}},
+		{UserExit: models.UserExit{UserID: 1, UUID: "u2", Email: "a@b.c/de"}},
+	}
+	expanded := ExpandInboundUsers(users, assignments)
+	if len(expanded) != 2 {
+		t.Fatalf("expected 2 inbound clients, got %d", len(expanded))
+	}
+	if expanded[0].UUID != "u1" || expanded[1].UUID != "u2" {
+		t.Fatalf("unexpected uuids: %+v", expanded)
+	}
+}
+
+func TestBuildMultihopDataFromAssignmentsRoutesPerExit(t *testing.T) {
+	nl := models.Node{
+		ID: 10, Name: "nl", Address: "nl.example", Port: 8443, Role: models.NodeRoleExit, Active: true,
+		Credentials: `{"uuid":"relay-nl","public_key":"pk","short_id":"ab"}`,
+	}
+	de := models.Node{
+		ID: 11, Name: "de", Address: "de.example", Port: 8443, Role: models.NodeRoleExit, Active: true,
+		Credentials: `{"uuid":"relay-de","public_key":"pk","short_id":"cd"}`,
+	}
+	data := BuildMultihopDataFromAssignments(
+		&config.MultihopConfig{Enabled: true, LocalRole: "entry"},
+		[]models.UserExitAssignment{
+			{UserExit: models.UserExit{Email: "u@x/nl", NodeID: 10}, Node: nl},
+			{UserExit: models.UserExit{Email: "u@x/de", NodeID: 11}, Node: de},
+			{UserExit: models.UserExit{Email: "v@x", NodeID: 10}, Node: nl},
+		},
+	)
+	if !data.Enabled || len(data.Outbounds) != 2 {
+		t.Fatalf("expected 2 outbounds, got %+v", data)
+	}
+	if len(data.Routings) != 2 {
+		t.Fatalf("expected 2 routing rules, got %+v", data.Routings)
 	}
 }

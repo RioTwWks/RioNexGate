@@ -66,9 +66,10 @@ type UpdateNodeRequest struct {
 }
 
 type UserChainRequest struct {
-	EntryNodeID *uint `json:"entry_node_id"`
-	ExitNodeID  *uint `json:"exit_node_id"`
-	Clear       bool  `json:"clear"`
+	EntryNodeID  *uint  `json:"entry_node_id"`
+	ExitNodeID   *uint  `json:"exit_node_id"`   // legacy single exit (also sets exit_node_ids=[id])
+	ExitNodeIDs  []uint `json:"exit_node_ids"`  // multi-exit: countries in one subscription
+	Clear        bool   `json:"clear"`
 }
 
 type NodeHealthResponse struct {
@@ -226,20 +227,38 @@ func (h *Handler) UpdateUserChain(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if req.ExitNodeID != nil {
-		node, err := h.db.GetNode(*req.ExitNodeID)
+
+	exitIDs := req.ExitNodeIDs
+	if len(exitIDs) == 0 && req.ExitNodeID != nil {
+		exitIDs = []uint{*req.ExitNodeID}
+	}
+	for _, eid := range exitIDs {
+		node, err := h.db.GetNode(eid)
 		if err != nil || node.Role != models.NodeRoleExit {
 			writeError(w, http.StatusBadRequest, "invalid exit node")
 			return
 		}
 	}
-	user, err := h.db.UpdateUser(id, db.UpdateUserInput{
-		EntryNodeID: req.EntryNodeID,
-		ExitNodeID:  req.ExitNodeID,
-		ClearChain:  req.Clear,
-	})
+
+	var user *models.User
+	if req.Clear {
+		user, err = h.db.UpdateUser(id, db.UpdateUserInput{
+			EntryNodeID: req.EntryNodeID,
+			ClearChain:  true,
+		})
+	} else {
+		user, err = h.db.UpdateUser(id, db.UpdateUserInput{
+			EntryNodeID: req.EntryNodeID,
+		})
+		if err == nil {
+			// Set multi-exit (or clear when empty slice was explicitly provided via exit_node_ids).
+			if req.ExitNodeIDs != nil || req.ExitNodeID != nil {
+				user, err = h.db.SetUserExits(id, exitIDs)
+			}
+		}
+	}
 	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.notifyUserDevicesRefresh(user.ID)
@@ -247,7 +266,7 @@ func (h *Handler) UpdateUserChain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "updated but reload failed: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserDTO(*user))
+	writeJSON(w, http.StatusOK, h.enrichUserDTO(r, toUserDTO(*user)))
 }
 
 func (h *Handler) getNodeParam(r *http.Request) (*models.Node, error) {

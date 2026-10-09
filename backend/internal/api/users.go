@@ -23,6 +23,7 @@ type UserDTO struct {
 	Active            bool      `json:"active"`
 	EntryNodeID       *uint     `json:"entry_node_id,omitempty"`
 	ExitNodeID        *uint     `json:"exit_node_id,omitempty"`
+	ExitNodeIDs       []uint    `json:"exit_node_ids,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 	SubscriptionToken string    `json:"subscription_token,omitempty"`
 	SubscriptionURL   string    `json:"subscription_url,omitempty"`
@@ -54,6 +55,19 @@ func (h *Handler) enrichUserDTO(r *http.Request, dto UserDTO) UserDTO {
 	if dto.SubscriptionToken != "" {
 		dto.SubscriptionURL = h.subscriptionURL(r, dto.SubscriptionToken)
 	}
+	if rows, err := h.db.ListUserExits(dto.ID); err == nil && len(rows) > 0 {
+		ids := make([]uint, 0, len(rows))
+		for _, row := range rows {
+			ids = append(ids, row.NodeID)
+		}
+		dto.ExitNodeIDs = ids
+		if dto.ExitNodeID == nil && len(ids) > 0 {
+			id := ids[0]
+			dto.ExitNodeID = &id
+		}
+	} else if dto.ExitNodeID != nil {
+		dto.ExitNodeIDs = []uint{*dto.ExitNodeID}
+	}
 	return dto
 }
 
@@ -82,7 +96,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	dtos := make([]UserDTO, len(users))
 	for i, u := range users {
-		dtos[i] = toUserDTO(u)
+		dtos[i] = h.enrichUserDTO(r, toUserDTO(u))
 	}
 	writeJSON(w, http.StatusOK, dtos)
 }

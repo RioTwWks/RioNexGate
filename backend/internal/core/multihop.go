@@ -13,13 +13,13 @@ type ClientEndpoint struct {
 
 // MultihopOutbound describes one exit relay outbound in xray config.
 type MultihopOutbound struct {
-	Tag     string
-	Node    models.Node
-	Creds   models.NodeCredentials
-	Chain   bool
+	Tag   string
+	Node  models.Node
+	Creds models.NodeCredentials
+	Chain bool
 }
 
-// MultihopRouting maps user emails to an exit outbound tag.
+// MultihopRouting maps inbound client emails to an exit outbound tag.
 type MultihopRouting struct {
 	UserEmails  []string
 	OutboundTag string
@@ -53,30 +53,87 @@ func ResolveClientEndpoint(publicHost string, listenPort int, user models.User, 
 	return ClientEndpoint{Host: publicHost, Port: listenPort}
 }
 
+// ExpandInboundUsers turns panel users + exit assignments into inbound VLESS clients.
+// One panel user with N exits becomes N inbound clients (different UUID/email per exit)
+// so the entry core can route each country selection independently.
+func ExpandInboundUsers(users []models.User, assignments []models.UserExitAssignment) []models.User {
+	byUser := map[uint][]models.UserExitAssignment{}
+	for _, a := range assignments {
+		byUser[a.UserExit.UserID] = append(byUser[a.UserExit.UserID], a)
+	}
+	out := make([]models.User, 0, len(users)+len(assignments))
+	for _, u := range users {
+		as := byUser[u.ID]
+		if len(as) == 0 {
+			out = append(out, u)
+			continue
+		}
+		for _, a := range as {
+			client := u
+			client.UUID = a.UserExit.UUID
+			client.Email = a.UserExit.Email
+			out = append(out, client)
+		}
+	}
+	return out
+}
+
 // BuildMultihopData builds outbound/routing data for entry-node xray configs.
+// Deprecated path: single exit per user via resolveExit. Prefer BuildMultihopDataFromAssignments.
 func BuildMultihopData(multihop *config.MultihopConfig, users []models.User, exitNodes []models.Node, resolveExit func(models.User) *models.Node) MultihopData {
 	if multihop == nil || !multihop.IsEntryNode() || len(exitNodes) == 0 {
+		return MultihopData{}
+	}
+
+	var assignments []models.UserExitAssignment
+	for _, user := range users {
+		exit := resolveExit(user)
+		if exit == nil {
+			continue
+		}
+		assignments = append(assignments, models.UserExitAssignment{
+			UserExit: models.UserExit{
+				UserID: user.ID,
+				NodeID: exit.ID,
+				UUID:   user.UUID,
+				Email:  user.Email,
+			},
+			Node: *exit,
+		})
+	}
+	return BuildMultihopDataFromAssignments(multihop, assignments)
+}
+
+// BuildMultihopDataFromAssignments builds outbounds for every referenced exit and
+// routes each assignment email to that exit's chain tag.
+func BuildMultihopDataFromAssignments(multihop *config.MultihopConfig, assignments []models.UserExitAssignment) MultihopData {
+	if multihop == nil || !multihop.IsEntryNode() || len(assignments) == 0 {
 		return MultihopData{}
 	}
 
 	outboundByID := make(map[uint]MultihopOutbound)
 	routeByTag := make(map[string][]string)
 
-	for _, user := range users {
-		exit := resolveExit(user)
-		if exit == nil {
+	for _, a := range assignments {
+		exit := a.Node
+		if !exit.Active || exit.Role != models.NodeRoleExit {
 			continue
 		}
 		if _, ok := outboundByID[exit.ID]; !ok {
 			creds := exit.ParsedCredentials().NormalizeForOutbound(exit.Address)
 			outboundByID[exit.ID] = MultihopOutbound{
 				Tag:   exit.OutboundTag(),
-				Node:  *exit,
+				Node:  exit,
 				Creds: creds,
 				Chain: true,
 			}
 		}
-		routeByTag[exit.OutboundTag()] = append(routeByTag[exit.OutboundTag()], user.Email)
+		email := a.UserExit.Email
+		if email == "" {
+			continue
+		}
+		tag := exit.OutboundTag()
+		routeByTag[tag] = append(routeByTag[tag], email)
 	}
 
 	if len(outboundByID) == 0 {
