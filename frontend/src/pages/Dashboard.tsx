@@ -14,6 +14,7 @@ import api from '../services/api';
 import type { TotalStats, User } from '../types/user';
 
 interface ClientMetrics {
+  active_clients: number;
   active_devices: number;
   sync_requests: number;
   registration_fails: number;
@@ -111,11 +112,11 @@ export function Dashboard() {
               accent="emerald"
             />
             <StatCard
-              label="Devices (24h)"
-              value={metrics?.active_devices ?? '—'}
+              label="Clients (24h)"
+              value={metrics?.active_clients ?? '—'}
               hint={
                 metrics
-                  ? `${metrics.sync_requests} syncs · ${metrics.registration_fails} reg fails`
+                  ? `${metrics.active_devices} RioNexTunnel · ${metrics.sync_requests} syncs`
                   : 'Client metrics unavailable'
               }
               accent="amber"

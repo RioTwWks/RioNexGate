@@ -225,6 +225,32 @@ func (d *DB) UpdateUserUsedBytes(id uint, usedBytes int64) error {
 	return d.Model(&models.User{}).Where("id = ?", id).Update("used_bytes", usedBytes).Error
 }
 
+// TouchUserLastActive marks the user as recently using the proxy (any client type).
+func (d *DB) TouchUserLastActive(id uint) error {
+	now := time.Now()
+	return d.Model(&models.User{}).Where("id = ?", id).Update("last_active_at", now).Error
+}
+
+// CountActiveClients returns panel users with proxy activity since the given time
+// (Xray/subscription traffic or RioNexTunnel device activity).
+func (d *DB) CountActiveClients(since time.Time) (int64, error) {
+	var count int64
+	err := d.Raw(`
+		SELECT COUNT(*) FROM (
+			SELECT id AS uid FROM users
+			WHERE last_active_at IS NOT NULL AND last_active_at >= ?
+			UNION
+			SELECT user_id AS uid FROM devices
+			WHERE last_seen_at IS NOT NULL AND last_seen_at >= ?
+			UNION
+			SELECT d.user_id AS uid FROM devices d
+			INNER JOIN client_stats_reports r ON r.device_token = d.token
+			WHERE r.reported_at >= ?
+		)
+	`, since, since, since).Scan(&count).Error
+	return count, err
+}
+
 func (d *DB) SetUserActive(id uint, active bool) error {
 	return d.Model(&models.User{}).Where("id = ?", id).Update("active", active).Error
 }
