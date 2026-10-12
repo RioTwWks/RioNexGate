@@ -76,13 +76,13 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
       >
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="modal-panel-header">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="btn-ghost px-2 py-1 text-slate-400" aria-label="Close">
             ✕
           </button>
         </div>
-        {children}
+        <div className="modal-panel-body">{children}</div>
       </div>
     </div>
   );

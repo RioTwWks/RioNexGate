@@ -290,9 +290,13 @@ textarea:focus {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
+  /* flex-start + margin auto: tall modals stay pinned to the top instead of
+     being vertically centered (center clips the title above the viewport). */
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
 }
@@ -300,15 +304,37 @@ textarea:focus {
 .modal-panel {
   width: 100%;
   max-width: 28rem;
-  max-height: 90vh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  max-height: calc(100dvh - 3rem);
+  min-height: 0;
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.15), 0 8px 32px rgba(14, 165, 233, 0.12);
 }
 
 .modal-panel.modal-panel-wide {
   max-width: 42rem;
+}
+
+.modal-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem 0.75rem;
+}
+
+.modal-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem;
+  overscroll-behavior: contain;
 }
 
 .nav-link,
