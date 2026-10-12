@@ -70,7 +70,7 @@ export function Modal({
   return (
     <div className="modal-backdrop" onClick={onClose} role="presentation">
       <div
-        className={`modal-panel ${wide ? 'max-w-2xl' : ''}`}
+        className={`modal-panel ${wide ? 'modal-panel-wide' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

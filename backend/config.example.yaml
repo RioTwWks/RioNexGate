@@ -33,10 +33,10 @@ core:
     binary_path: "/usr/local/bin/xray"
     # Where the backend container connects for stats (host-gateway from bridge network).
     api_address: "host.docker.internal:10085"
-    # Bind address in generated Xray config (default: 127.0.0.1 — never 0.0.0.0).
-    # For Docker bridge → host stats without opening all interfaces, set e.g. 172.17.0.1:10085
-    # and keep a host firewall. Leave empty to use loopback derived from api_address.
-    api_listen: "127.0.0.1:10085"
+    # Bind address written into Xray config. MUST be reachable from the backend container.
+    # Use docker0 (172.17.0.1), NOT 127.0.0.1 — loopback is invisible across Docker bridge.
+    # With api_address=host.docker.internal, empty/127.0.0.1 is auto-rewritten to 172.17.0.1.
+    api_listen: "172.17.0.1:10085"
   singbox:
     config_path: "./data/sing-box/config.json"
     binary_path: "/usr/local/bin/sing-box"

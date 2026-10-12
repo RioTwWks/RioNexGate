@@ -26,20 +26,30 @@ type templateData struct {
 }
 
 // xrayAPIListenAddress returns the bind address for Xray's stats API in generated config.
-// api_address is where the backend connects (may be host.docker.internal from a bridge
-// network). api_listen, when set, is used as-is. Otherwise the listen address defaults
-// to loopback — never 0.0.0.0. For Docker bridge → host stats, set api_listen to the
-// docker0 address (e.g. 172.17.0.1:10085) or run behind a host firewall.
+// When the backend runs in Docker (api_address=host.docker.internal:PORT), Xray must not
+// bind only to 127.0.0.1 — the bridge gateway (typically 172.17.0.1) cannot reach loopback.
+// In that case we prefer 172.17.0.1:PORT (or an explicit non-loopback api_listen).
 func xrayAPIListenAddress(apiAddress, apiListen string) string {
-	if strings.TrimSpace(apiListen) != "" {
-		return apiListen
-	}
-	host, port, err := net.SplitHostPort(apiAddress)
+	listen := strings.TrimSpace(apiListen)
+	host, port, err := net.SplitHostPort(strings.TrimSpace(apiAddress))
 	if err != nil {
+		if listen != "" {
+			return listen
+		}
 		return apiAddress
 	}
-	if host == "host.docker.internal" || host == "0.0.0.0" || host == "" {
-		return "127.0.0.1:" + port
+	loopbackListen := "127.0.0.1:" + port
+	if host == "host.docker.internal" {
+		if listen == "" || listen == loopbackListen || listen == "localhost:"+port {
+			return "172.17.0.1:" + port
+		}
+		return listen
+	}
+	if listen != "" {
+		return listen
+	}
+	if host == "0.0.0.0" || host == "" {
+		return loopbackListen
 	}
 	return apiAddress
 }

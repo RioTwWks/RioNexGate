@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 export interface UserFormData {
   email: string;
@@ -13,6 +13,8 @@ interface Props {
   onCancel: () => void;
   submitLabel?: string;
   showExpireDays?: boolean;
+  /** Inserted above Cancel/Save (e.g. multi-hop chain in Edit). */
+  extra?: ReactNode;
 }
 
 export function UserForm({
@@ -21,6 +23,7 @@ export function UserForm({
   onCancel,
   submitLabel = 'Save',
   showExpireDays = true,
+  extra,
 }: Props) {
   const [email, setEmail] = useState(initial?.email ?? '');
   const [trafficGb, setTrafficGb] = useState(initial?.traffic_gb ?? 50);
@@ -92,7 +95,8 @@ export function UserForm({
           Active
         </label>
       )}
-      <div className="flex gap-2 justify-end pt-2">
+      {extra}
+      <div className="flex gap-2 justify-end pt-2 sticky bottom-0 bg-surface-panel/95 backdrop-blur-sm pb-0.5">
         <button type="button" onClick={onCancel} className="btn-secondary">
           Cancel
         </button>
