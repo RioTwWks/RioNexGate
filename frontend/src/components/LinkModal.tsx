@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import { copyText } from '../utils/clipboard';
 import { Modal } from './ui';
 
 const PROTOCOLS = ['vless', 'vmess', 'trojan'] as const;
@@ -60,7 +61,10 @@ export function LinkModal({ userId, onClose }: Props) {
 
   const copyLink = async () => {
     if (!link) return;
-    await navigator.clipboard.writeText(link);
+    if (!(await copyText(link))) {
+      setError('Could not copy — select the link and copy manually');
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -68,6 +68,13 @@ func (h *Handler) enrichUserDTO(r *http.Request, dto UserDTO) UserDTO {
 	} else if dto.ExitNodeID != nil {
 		dto.ExitNodeIDs = []uint{*dto.ExitNodeID}
 	}
+	// Prefer higher of stored used_bytes and RioNexTunnel client reports.
+	if clientBytes, err := h.db.ClientReportedBytesForUser(dto.ID); err == nil && clientBytes > 0 {
+		clientGB := float64(clientBytes) / (1024 * 1024 * 1024)
+		if clientGB > dto.UsedGB {
+			dto.UsedGB = clientGB
+		}
+	}
 	return dto
 }
 

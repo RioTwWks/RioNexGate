@@ -11,13 +11,13 @@ import {
   revokeUserInvite,
 } from '../services/api';
 import { SyncStatusBadge } from '../components/SyncStatusBadge';
-import { UserChainSection } from '../components/UserChainSection';
 import { PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { Device } from '../types/device';
 import { getSyncStatus } from '../types/device';
 import type { Invite } from '../types/invite';
 import type { ProfileLink } from '../types/stealth';
 import type { User } from '../types/user';
+import { copyText } from '../utils/clipboard';
 
 interface Props {
   userId: number;
@@ -73,7 +73,11 @@ export function UserDetail({ userId }: Props) {
 
   const copySubscription = async () => {
     if (!user?.subscription_url) return;
-    await navigator.clipboard.writeText(user.subscription_url);
+    const ok = await copyText(user.subscription_url);
+    if (!ok) {
+      setError('Could not copy to clipboard — select the URL and copy manually');
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -85,9 +89,13 @@ export function UserDetail({ userId }: Props) {
       const link = await mintSubscriptionLink(userId, 168);
       setSignedURL(link.url);
       setSignedExpires(link.expires_at);
-      await navigator.clipboard.writeText(link.url);
-      setCopiedSigned(true);
-      setTimeout(() => setCopiedSigned(false), 2000);
+      const ok = await copyText(link.url);
+      if (ok) {
+        setCopiedSigned(true);
+        setTimeout(() => setCopiedSigned(false), 2000);
+      } else {
+        setError('Signed link created — copy it from the field below');
+      }
     } catch {
       setError('Failed to mint signed subscription link');
     } finally {
@@ -138,13 +146,13 @@ export function UserDetail({ userId }: Props) {
   };
 
   const copyInviteToken = async (token: string) => {
-    await navigator.clipboard.writeText(token);
+    if (!(await copyText(token))) return;
     setCopiedInvite(token);
     setTimeout(() => setCopiedInvite(null), 2000);
   };
 
   const copyProfileLink = async (id: string, link: string) => {
-    await navigator.clipboard.writeText(link);
+    if (!(await copyText(link))) return;
     setCopiedProfile(id);
     setTimeout(() => setCopiedProfile(null), 2000);
   };
@@ -195,8 +203,6 @@ export function UserDetail({ userId }: Props) {
       </div>
 
       {error && <p className="alert-error">{error}</p>}
-
-      <UserChainSection user={user} onUpdated={setUser} />
 
       <section className="card-pad">
         <h2 className="text-lg font-medium mb-3">Subscription</h2>

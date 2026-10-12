@@ -250,6 +250,8 @@ func (h *Handler) PostClientStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = h.db.UpdateDeviceLastSeen(dc.Device.Token)
+	// Keep panel traffic counters in sync when Xray gRPC stats are unavailable.
+	_ = h.db.SyncUserUsedBytesFromClientReports(dc.User.ID)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 

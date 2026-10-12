@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { LinkModal } from '../components/LinkModal';
+import { UserChainSection } from '../components/UserChainSection';
 import { UserForm } from '../components/UserForm';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { User } from '../types/user';
@@ -171,26 +172,35 @@ export function Users() {
       )}
 
       {editUser && (
-        <Modal title="Edit user" onClose={() => setEditUser(null)}>
-          <UserForm
-            initial={{
-              email: editUser.email,
-              traffic_gb: editUser.traffic_gb,
-              expire_days: 30,
-              active: editUser.active,
-            }}
-            showExpireDays={false}
-            onCancel={() => setEditUser(null)}
-            onSubmit={async (data) => {
-              await api.put(`/users/${editUser.id}`, {
-                email: data.email,
-                traffic_gb: data.traffic_gb,
-                active: data.active,
-              });
-              setEditUser(null);
-              fetchUsers();
-            }}
-          />
+        <Modal title="Edit user" onClose={() => setEditUser(null)} wide>
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+            <UserForm
+              initial={{
+                email: editUser.email,
+                traffic_gb: editUser.traffic_gb,
+                expire_days: 30,
+                active: editUser.active,
+              }}
+              showExpireDays={false}
+              onCancel={() => setEditUser(null)}
+              onSubmit={async (data) => {
+                await api.put(`/users/${editUser.id}`, {
+                  email: data.email,
+                  traffic_gb: data.traffic_gb,
+                  active: data.active,
+                });
+                setEditUser(null);
+                fetchUsers();
+              }}
+            />
+            <UserChainSection
+              user={editUser}
+              onUpdated={(u) => {
+                setEditUser(u);
+                fetchUsers();
+              }}
+            />
+          </div>
         </Modal>
       )}
 

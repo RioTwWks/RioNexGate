@@ -34,27 +34,33 @@ export function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      api.get<TotalStats>('/stats/total'),
-      api.get<User[]>('/users'),
-      api.get<ClientMetrics>('/stats/client').catch(() => null),
-      api.get<HealthInfo>('/health').catch(() => null),
-    ])
-      .then(([statsRes, usersRes, metricsRes, healthRes]) => {
-        if (cancelled) return;
-        setStats(statsRes.data);
-        setUsers(usersRes.data);
-        setMetrics(metricsRes?.data ?? null);
-        setHealth(healthRes?.data ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load stats');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const load = () =>
+      Promise.all([
+        api.get<TotalStats>('/stats/total'),
+        api.get<User[]>('/users'),
+        api.get<ClientMetrics>('/stats/client').catch(() => null),
+        api.get<HealthInfo>('/health').catch(() => null),
+      ])
+        .then(([statsRes, usersRes, metricsRes, healthRes]) => {
+          if (cancelled) return;
+          setStats(statsRes.data);
+          setUsers(usersRes.data);
+          setMetrics(metricsRes?.data ?? null);
+          setHealth(healthRes?.data ?? null);
+          setError('');
+        })
+        .catch(() => {
+          if (!cancelled) setError('Failed to load stats');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+
+    load();
+    const timer = window.setInterval(load, 30_000);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, []);
 
