@@ -2,11 +2,8 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -226,28 +223,34 @@ func (m *manager) collectStats() {
 			emails = []string{user.Email}
 		}
 		var up, down int64
-		got := false
+		gotXray := false
 		for _, email := range emails {
 			u, d, err := m.fetchUserStats(email)
 			if err != nil {
 				continue
 			}
-			got = true
+			gotXray = true
 			up += u
 			down += d
 		}
-		if !got {
+		serverTotal := up + down
+		clientTotal, _ := m.db.ClientReportedBytesForUser(user.ID)
+		total := serverTotal
+		if clientTotal > total {
+			total = clientTotal
+		}
+		if total == 0 && !gotXray && clientTotal == 0 {
 			continue
 		}
-		total := up + down
-		if total == 0 {
-			continue
+		if total > 0 && total != user.UsedBytes {
+			if err := m.db.UpdateUserUsedBytes(user.ID, total); err != nil {
+				log.Printf("stats: update user %d: %v", user.ID, err)
+				continue
+			}
 		}
-		if err := m.db.UpdateUserUsedBytes(user.ID, total); err != nil {
-			log.Printf("stats: update user %d: %v", user.ID, err)
-			continue
+		if gotXray && (up > 0 || down > 0) {
+			_ = m.db.RecordTraffic(user.ID, up, down)
 		}
-		_ = m.db.RecordTraffic(user.ID, up, down)
 		user.UsedBytes = total
 		if m.cfg.AutoDeactivateOnQuotaEnabled() && user.Active && user.IsQuotaExceeded() {
 			if err := m.db.SetUserActive(user.ID, false); err != nil {
@@ -274,58 +277,13 @@ func (m *manager) fetchUserStats(email string) (int64, int64, error) {
 		return 0, 0, fmt.Errorf("xray api address not configured")
 	}
 
-	up, err := queryXrayStat(apiAddr, "user>>>"+email+">>>traffic>>>uplink")
+	up, err := queryXrayStatGRPC(apiAddr, "user>>>"+email+">>>traffic>>>uplink")
 	if err != nil {
 		return 0, 0, err
 	}
-	down, err := queryXrayStat(apiAddr, "user>>>"+email+">>>traffic>>>downlink")
+	down, err := queryXrayStatGRPC(apiAddr, "user>>>"+email+">>>traffic>>>downlink")
 	if err != nil {
 		return 0, 0, err
 	}
 	return up, down, nil
-}
-
-type xrayStatsResponse struct {
-	Stat map[string]int64 `json:"stat"`
-}
-
-func queryXrayStat(apiAddr, name string) (int64, error) {
-	url := fmt.Sprintf("http://%s/stats?name=%s", apiAddr, name)
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("xray stats: %s", string(body))
-	}
-	var result struct {
-		Stat []struct {
-			Name  string `json:"name"`
-			Value int64  `json:"value"`
-		} `json:"stat"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		// try alternate format
-		var alt struct {
-			Value int64 `json:"value"`
-		}
-		if err2 := json.Unmarshal(body, &alt); err2 != nil {
-			return 0, err
-		}
-		return alt.Value, nil
-	}
-	for _, s := range result.Stat {
-		if s.Name == name {
-			return s.Value, nil
-		}
-	}
-	if len(result.Stat) > 0 {
-		return result.Stat[0].Value, nil
-	}
-	return 0, nil
 }

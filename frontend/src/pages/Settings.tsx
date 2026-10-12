@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/ui';
 import api, { rotateApiKey, setApiKey } from '../services/api';
+import { copyText } from '../utils/clipboard';
 
 const CORES = [
   {
@@ -121,8 +122,11 @@ export function Settings() {
                 type="button"
                 className="btn-primary"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(newKeyPreview);
-                  setMessage('New API key copied');
+                  if (await copyText(newKeyPreview)) {
+                    setMessage('New API key copied');
+                  } else {
+                    setMessage('Could not copy — select the key field manually');
+                  }
                 }}
               >
                 Copy new key

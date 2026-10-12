@@ -201,6 +201,31 @@ func (d *DB) ClientReportedBytesForUser(userID uint) (int64, error) {
 
 func (d *DB) CountActiveDevices(since time.Time) (int64, error) {
 	var count int64
-	err := d.Model(&models.Device{}).Where("last_seen_at >= ?", since).Count(&count).Error
+	// Count devices seen recently via sync/commands OR that reported traffic stats.
+	err := d.Raw(`
+		SELECT COUNT(*) FROM (
+			SELECT id FROM devices WHERE last_seen_at IS NOT NULL AND last_seen_at >= ?
+			UNION
+			SELECT d.id FROM devices d
+			INNER JOIN client_stats_reports r ON r.device_token = d.token
+			WHERE r.reported_at >= ?
+		)
+	`, since, since).Scan(&count).Error
 	return count, err
+}
+
+// SyncUserUsedBytesFromClientReports sets used_bytes to max(current, client-reported sum).
+func (d *DB) SyncUserUsedBytesFromClientReports(userID uint) error {
+	clientTotal, err := d.ClientReportedBytesForUser(userID)
+	if err != nil || clientTotal <= 0 {
+		return err
+	}
+	user, err := d.GetUser(userID)
+	if err != nil {
+		return err
+	}
+	if clientTotal <= user.UsedBytes {
+		return nil
+	}
+	return d.UpdateUserUsedBytes(userID, clientTotal)
 }
