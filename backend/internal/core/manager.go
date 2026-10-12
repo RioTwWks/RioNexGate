@@ -217,6 +217,8 @@ func (m *manager) collectStats() {
 		return
 	}
 	reload := false
+	var xrayDialErr error
+	xrayOK := false
 	for _, user := range users {
 		emails, err := m.db.ListUserExitEmails(user.ID)
 		if err != nil || len(emails) == 0 {
@@ -227,9 +229,13 @@ func (m *manager) collectStats() {
 		for _, email := range emails {
 			u, d, err := m.fetchUserStats(email)
 			if err != nil {
+				if xrayDialErr == nil {
+					xrayDialErr = err
+				}
 				continue
 			}
 			gotXray = true
+			xrayOK = true
 			up += u
 			down += d
 		}
@@ -260,6 +266,10 @@ func (m *manager) collectStats() {
 			log.Printf("user %d deactivated: traffic quota exceeded", user.ID)
 			reload = true
 		}
+	}
+	if !xrayOK && xrayDialErr != nil && m.Type() == "xray" {
+		log.Printf("stats: xray gRPC unreachable at %s: %v — set core.xray.api_listen to 172.17.0.1:10085 (not 127.0.0.1) when backend runs in Docker, then reload core",
+			m.cfg.Core.Xray.APIAddress, xrayDialErr)
 	}
 	if reload {
 		if err := m.Reload(); err != nil {

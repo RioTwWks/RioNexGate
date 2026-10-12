@@ -173,34 +173,35 @@ export function Users() {
 
       {editUser && (
         <Modal title="Edit user" onClose={() => setEditUser(null)} wide>
-          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
-            <UserForm
-              initial={{
-                email: editUser.email,
-                traffic_gb: editUser.traffic_gb,
-                expire_days: 30,
-                active: editUser.active,
-              }}
-              showExpireDays={false}
-              onCancel={() => setEditUser(null)}
-              onSubmit={async (data) => {
-                await api.put(`/users/${editUser.id}`, {
-                  email: data.email,
-                  traffic_gb: data.traffic_gb,
-                  active: data.active,
-                });
-                setEditUser(null);
-                fetchUsers();
-              }}
-            />
-            <UserChainSection
-              user={editUser}
-              onUpdated={(u) => {
-                setEditUser(u);
-                fetchUsers();
-              }}
-            />
-          </div>
+          <UserForm
+            initial={{
+              email: editUser.email,
+              traffic_gb: editUser.traffic_gb,
+              expire_days: 30,
+              active: editUser.active,
+            }}
+            showExpireDays={false}
+            onCancel={() => setEditUser(null)}
+            onSubmit={async (data) => {
+              await api.put(`/users/${editUser.id}`, {
+                email: data.email,
+                traffic_gb: data.traffic_gb,
+                active: data.active,
+              });
+              setEditUser(null);
+              fetchUsers();
+            }}
+            extra={
+              <UserChainSection
+                embedded
+                user={editUser}
+                onUpdated={(u) => {
+                  setEditUser(u);
+                  fetchUsers();
+                }}
+              />
+            }
+          />
         </Modal>
       )}
 

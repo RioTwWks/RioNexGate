@@ -301,9 +301,14 @@ textarea:focus {
   width: 100%;
   max-width: 28rem;
   max-height: 90vh;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 1.5rem;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.15), 0 8px 32px rgba(14, 165, 233, 0.12);
+}
+
+.modal-panel.modal-panel-wide {
+  max-width: 42rem;
 }
 
 .nav-link,

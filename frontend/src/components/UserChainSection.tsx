@@ -17,9 +17,12 @@ function initialExitIds(user: User): number[] {
 export function UserChainSection({
   user,
   onUpdated,
+  embedded = false,
 }: {
   user: User;
   onUpdated: (u: User) => void;
+  /** Compact layout for Edit modal (no nested card / less scroll nesting). */
+  embedded?: boolean;
 }) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [entryId, setEntryId] = useState(user.entry_node_id?.toString() ?? '');
@@ -66,17 +69,20 @@ export function UserChainSection({
     });
   }
 
+  const shell = embedded
+    ? 'space-y-3 rounded-xl border border-surface-border bg-slate-950/30 p-3'
+    : 'card-pad space-y-4';
+
   return (
-    <section data-testid="user-chain-section" className="card-pad space-y-4">
+    <section data-testid="user-chain-section" className={shell}>
       <div>
-        <h2 className="text-lg font-medium">Multi-hop chain</h2>
+        <h2 className={`font-medium ${embedded ? 'text-sm' : 'text-lg'}`}>Multi-hop chain</h2>
         <p className="text-xs text-slate-500 mt-1">
-          Entry + one or more exit countries. Multiple exits appear as selectable servers in one
-          subscription.
+          Entry + exit countries in one subscription. First exit keeps the user UUID.
         </p>
       </div>
-      <ChainTopology entry={entry} exits={selectedExits} />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <ChainTopology entry={entry} exits={selectedExits} compact={embedded} />
+      <div className={`grid gap-3 ${embedded ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
         <div>
           <label className="label">Entry node</label>
           <select
@@ -100,7 +106,9 @@ export function UserChainSection({
           <label className="label">Exit countries</label>
           <div
             data-testid="exit-node-multiselect"
-            className="rounded-lg border border-surface-border bg-slate-950/40 divide-y divide-surface-border max-h-56 overflow-y-auto"
+            className={`rounded-lg border border-surface-border bg-slate-950/40 divide-y divide-surface-border overflow-y-auto ${
+              embedded ? 'max-h-36' : 'max-h-56'
+            }`}
           >
             {exitNodes.length === 0 && (
               <p className="px-3 py-2 text-xs text-slate-500">No exit nodes</p>
@@ -157,17 +165,14 @@ export function UserChainSection({
               );
             })}
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            First selected exit is primary (keeps user UUID). Empty = auto by priority.
-          </p>
         </div>
       </div>
-      {message && <p className="alert-ok">{message}</p>}
-      {error && <p className="alert-error">{error}</p>}
+      {message && <p className="alert-ok text-xs">{message}</p>}
+      {error && <p className="alert-error text-xs">{error}</p>}
       <button
         data-testid="save-chain"
         type="button"
-        className="btn-primary"
+        className={embedded ? 'btn-secondary' : 'btn-primary'}
         disabled={saving}
         onClick={async () => {
           setSaving(true);
@@ -181,7 +186,7 @@ export function UserChainSection({
             onUpdated(updated);
             setMessage(
               exitIds.length > 1
-                ? `Chain saved · ${exitIds.length} exits in subscription`
+                ? `Chain saved · ${exitIds.length} exits`
                 : 'Chain saved',
             );
           } catch {
