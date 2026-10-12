@@ -20,6 +20,9 @@ type TotalStatsResponse struct {
 }
 
 type ClientMetricsResponse struct {
+	// ActiveClients = panel users with proxy traffic or device activity in the window.
+	ActiveClients int64 `json:"active_clients"`
+	// ActiveDevices = RioNexTunnel registered devices seen in the window (subset).
 	ActiveDevices     int64 `json:"active_devices"`
 	SyncRequests      int64 `json:"sync_requests"`
 	RegistrationFails int64 `json:"registration_fails"`
@@ -27,9 +30,11 @@ type ClientMetricsResponse struct {
 
 func (h *Handler) GetClientMetrics(w http.ResponseWriter, r *http.Request) {
 	since := time.Now().Add(-24 * time.Hour)
-	active, _ := h.db.CountActiveDevices(since)
+	clients, _ := h.db.CountActiveClients(since)
+	devices, _ := h.db.CountActiveDevices(since)
 	writeJSON(w, http.StatusOK, ClientMetricsResponse{
-		ActiveDevices:     active,
+		ActiveClients:     clients,
+		ActiveDevices:     devices,
 		SyncRequests:      atomic.LoadInt64(&h.metrics.SyncRequests),
 		RegistrationFails: atomic.LoadInt64(&h.metrics.RegistrationFails),
 	})

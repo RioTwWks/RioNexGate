@@ -248,11 +248,16 @@ func (m *manager) collectStats() {
 		if total == 0 && !gotXray && clientTotal == 0 {
 			continue
 		}
+		prevUsed := user.UsedBytes
 		if total > 0 && total != user.UsedBytes {
 			if err := m.db.UpdateUserUsedBytes(user.ID, total); err != nil {
 				log.Printf("stats: update user %d: %v", user.ID, err)
 				continue
 			}
+		}
+		// Any client type: traffic increase means the user was active recently.
+		if total > prevUsed {
+			_ = m.db.TouchUserLastActive(user.ID)
 		}
 		if gotXray && (up > 0 || down > 0) {
 			_ = m.db.RecordTraffic(user.ID, up, down)

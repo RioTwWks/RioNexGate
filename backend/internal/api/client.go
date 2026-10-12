@@ -250,6 +250,7 @@ func (h *Handler) PostClientStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = h.db.UpdateDeviceLastSeen(dc.Device.Token)
+	_ = h.db.TouchUserLastActive(dc.User.ID)
 	// Keep panel traffic counters in sync when Xray gRPC stats are unavailable.
 	_ = h.db.SyncUserUsedBytesFromClientReports(dc.User.ID)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -344,6 +345,9 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, msg)
 		return
 	}
+
+	// Subscription clients (v2rayNG, Clash, etc.) are not RioNexTunnel devices.
+	_ = h.db.TouchUserLastActive(user.ID)
 
 	entry, _ := h.db.ResolveUserEntryNode(user)
 	exits, _ := h.db.ListUserExitAssignments(user.ID)

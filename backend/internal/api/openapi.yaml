@@ -334,11 +334,11 @@ paths:
                 description: SSE stream with `event: commands` and JSON payload
   /stats/client:
     get:
-      summary: RioNexTunnel client metrics
+      summary: Active clients and RioNexTunnel device metrics
       tags: [Stats]
       responses:
         "200":
-          description: Active devices and sync counters
+          description: Active clients (any type), RioNexTunnel devices, and sync counters
           content:
             application/json:
               schema:
@@ -927,8 +927,12 @@ components:
     ClientMetrics:
       type: object
       properties:
+        active_clients:
+          type: integer
+          description: Panel users with proxy/subscription activity in the window (any client)
         active_devices:
           type: integer
+          description: RioNexTunnel registered devices seen in the window
         sync_requests:
           type: integer
         registration_fails:

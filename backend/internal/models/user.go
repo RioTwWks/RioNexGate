@@ -11,9 +11,10 @@ type User struct {
 	UsedBytes         int64     `json:"-"`
 	ExpiresAt         time.Time `json:"expires_at"`
 	Active            bool      `gorm:"default:true" json:"active"`
-	EntryNodeID       *uint     `json:"entry_node_id,omitempty"`
-	ExitNodeID        *uint     `json:"exit_node_id,omitempty"`
-	CreatedAt         time.Time `json:"created_at"`
+	EntryNodeID       *uint      `json:"entry_node_id,omitempty"`
+	ExitNodeID        *uint      `json:"exit_node_id,omitempty"`
+	LastActiveAt      *time.Time `json:"last_active_at,omitempty"` // proxy traffic seen (any client)
+	CreatedAt         time.Time  `json:"created_at"`
 }
 
 // IsExpired reports whether the account past expires_at (zero means no expiry).
