@@ -8,6 +8,7 @@ import { Settings } from './pages/Settings';
 import { Stealth } from './pages/Stealth';
 import { Users } from './pages/Users';
 import { UserDetailPage } from './pages/UserDetailPage';
+import { UserEditPage } from './pages/UserEditPage';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="users" element={<Users />} />
+        <Route path="users/:id/edit" element={<UserEditPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="nodes" element={<Nodes />} />
         <Route path="stealth" element={<Stealth />} />
