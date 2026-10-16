@@ -96,7 +96,7 @@ export function UserForm({
         </label>
       )}
       {extra}
-      <div className="flex gap-2 justify-end pt-3 sticky bottom-0 -mx-1 px-1 bg-[rgba(18,26,43,0.96)] backdrop-blur-sm pb-0.5">
+      <div className="flex gap-2 justify-end pt-2">
         <button type="button" onClick={onCancel} className="btn-secondary">
           Cancel
         </button>
