@@ -17,6 +17,10 @@ type StatsPoint struct {
 type TotalStatsResponse struct {
 	TotalUsedGB float64      `json:"total_used_gb"`
 	Points      []StatsPoint `json:"points"`
+	// StatsDegraded is true when the core stats API was unreachable during the
+	// last collection — traffic limits then run on the last server-side values
+	// and client-reported bytes do not raise quota (unless trust_client_stats).
+	StatsDegraded bool `json:"stats_degraded"`
 }
 
 type ClientMetricsResponse struct {
@@ -61,8 +65,9 @@ func (h *Handler) GetTotalStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, TotalStatsResponse{
-		TotalUsedGB: float64(total) / (1024 * 1024 * 1024),
-		Points:      points,
+		TotalUsedGB:   float64(total) / (1024 * 1024 * 1024),
+		Points:        points,
+		StatsDegraded: h.core.StatsDegraded(),
 	})
 }
 
