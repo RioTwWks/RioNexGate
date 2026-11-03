@@ -194,6 +194,12 @@ export function UserDetail({ userId }: Props) {
           <>
             <StatusBadge active={user.active} expired={expired} />
             <SyncStatusBadge status={overallSync} />
+            <Link to={`/users/${user.id}/edit`} className="btn-secondary">
+              Edit
+            </Link>
+            <Link to="/users" className="btn-secondary">
+              Back
+            </Link>
           </>
         }
       />

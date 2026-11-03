@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { LinkModal } from '../components/LinkModal';
-import { UserChainSection } from '../components/UserChainSection';
 import { UserForm } from '../components/UserForm';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge, TrafficBar } from '../components/ui';
 import type { User } from '../types/user';
@@ -13,7 +12,6 @@ export function Users() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [editUser, setEditUser] = useState<User | null>(null);
   const [linkUserId, setLinkUserId] = useState<number | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -116,13 +114,9 @@ export function Users() {
                       <button type="button" onClick={() => setLinkUserId(u.id)} className="link-action">
                         Link
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditUser(u)}
-                        className="text-slate-300 hover:underline text-sm"
-                      >
+                      <Link to={`/users/${u.id}/edit`} className="text-slate-300 hover:underline text-sm">
                         Edit
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => deleteUser(u.id)}
@@ -167,40 +161,6 @@ export function Users() {
               setShowAdd(false);
               fetchUsers();
             }}
-          />
-        </Modal>
-      )}
-
-      {editUser && (
-        <Modal title="Edit user" onClose={() => setEditUser(null)} wide>
-          <UserForm
-            initial={{
-              email: editUser.email,
-              traffic_gb: editUser.traffic_gb,
-              expire_days: 30,
-              active: editUser.active,
-            }}
-            showExpireDays={false}
-            onCancel={() => setEditUser(null)}
-            onSubmit={async (data) => {
-              await api.put(`/users/${editUser.id}`, {
-                email: data.email,
-                traffic_gb: data.traffic_gb,
-                active: data.active,
-              });
-              setEditUser(null);
-              fetchUsers();
-            }}
-            extra={
-              <UserChainSection
-                embedded
-                user={editUser}
-                onUpdated={(u) => {
-                  setEditUser(u);
-                  fetchUsers();
-                }}
-              />
-            }
           />
         </Modal>
       )}
