@@ -239,7 +239,7 @@ Before exposing the panel beyond localhost:
 5. Set `enable_docs: false` on internet-facing hosts
 6. Restrict `cors_origins` to your panel URL(s)
 7. Do not publish host ports `8080`/`3000` publicly (compose binds them to `127.0.0.1` only)
-8. Firewall Xray/sing-box/Skadi ports; keep stats API on loopback (`api_listen`)
+8. Firewall Xray/sing-box/Skadi ports; keep the Xray stats API on the internal `core-stats` network (default compose) and sing-box/Skadi APIs on loopback
 9. Encrypt backups: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
 10. Ensure `./data` is owned by uid `1000` (backend non-root user)
 11. Rotate API key from Settings after first install; prefer signed subscription links
@@ -296,8 +296,8 @@ core:
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
-    api_address: "host.docker.internal:10085"  # backend → host stats URL
-    api_listen: "127.0.0.1:10085"               # Xray bind (never 0.0.0.0 by default)
+    api_address: "xray-core:10085"   # backend → xray-core via internal core-stats network
+    api_listen: "0.0.0.0:10085"        # safe: no published port, isolated networks
   singbox:
     config_path: "./data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
@@ -430,7 +430,7 @@ AGE_IDENTITY=~/.config/age/key.txt ./scripts/restore.sh backups/rionexgate-data-
 | `api_key is missing or insecure` | Set a long random `server.api_key` (or re-run `make init` on a fresh config) |
 | backend cannot write `./data` | `sudo chown -R 1000:1000 data` (container user) |
 | `make dev` cannot access docker | Re-login after `usermod`; `make` falls back to `sg docker` |
-| xray stats not working | `make dev-cores`; set `core.xray.api_listen` if bridge cannot reach loopback |
+| xray stats not working | `make dev-cores`; check `core.xray.api_address: xray-core:10085` and that backend/xray-core share the `core-stats` network |
 
 Diagnostics: `make docker-doctor`
 
