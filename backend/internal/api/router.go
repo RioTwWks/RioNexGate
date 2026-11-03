@@ -32,6 +32,7 @@ func NewRouter(cfg *config.Config, database *db.DB, coreMgr core.Manager) http.H
 		r.Get("/health", h.Health)
 		if cfg.DocsEnabled() {
 			r.Get("/docs", h.SwaggerUI)
+			r.Get("/docs/{asset}", h.SwaggerUIAsset)
 			r.Get("/openapi.yaml", h.OpenAPISpec)
 		}
 		r.Get("/subscription/{token}", h.GetSubscription)
