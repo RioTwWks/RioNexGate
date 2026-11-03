@@ -21,6 +21,8 @@ import (
 	"rionexgate/internal/models"
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	t.Helper()
 
@@ -29,7 +31,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	xrayPath := filepath.Join(dir, "xray", "config.json")
 
 	cfg := &config.Config{
-		Server: config.ServerConfig{Port: 8080, APIKey: "test-secret-key16"},
+		Server: config.ServerConfig{Port: 8080, APIKey: "test-secret-key16", EnableDocs: boolPtr(true)},
 		Database: config.DatabaseConfig{Path: dbPath},
 		Core: config.CoreConfig{
 			Type:       "xray",
@@ -450,4 +452,39 @@ func TestInviteTokenRegistration(t *testing.T) {
 		t.Fatal("expected invite reuse to fail")
 	}
 	resp.Body.Close()
+}
+
+// TestDocsDisabledByDefault ensures /api/docs and /api/openapi.yaml are NOT
+// registered unless server.enable_docs is explicitly set (issue #44).
+func TestDocsDisabledByDefault(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("sqlite requires CGO")
+	}
+
+	dir := t.TempDir()
+	cfg := &config.Config{
+		Server:   config.ServerConfig{Port: 8080, APIKey: "test-secret-key16"},
+		Database: config.DatabaseConfig{Path: filepath.Join(dir, "test.db")},
+	}
+	database, err := db.Open(cfg.Database.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.AutoMigrate(); err != nil {
+		t.Fatal(err)
+	}
+	router := api.NewRouter(cfg, database, core.NewManager(cfg, database))
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	for _, path := range []string{"/docs", "/openapi.yaml"} {
+		resp, err := http.Get(srv.URL + "/api" + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("%s: expected 404 with docs disabled by default, got %d", path, resp.StatusCode)
+		}
+	}
 }

@@ -88,7 +88,7 @@ flowchart TD
 - [x] SQLite `0600`; backup archive `0600` + warning
 - [x] MaxBytesReader 1 MiB на body
 - [x] axios bump; npm audit fix (остались breaking: vite/react-router major)
-- [x] `server.enable_docs` (default true; выключать в prod)
+- [x] `server.enable_docs` (default false; включать только для dev)
 - [x] Non-root backend/frontend/nginx; `read_only` + `tmpfs`; `no-new-privileges`; `cap_drop: ALL`
 - [x] Pin `sing-box` tag (v1.14.2; override via `SINGBOX_IMAGE`)
 - [x] Pin amneziawg tag `3.1.20260828`; drop `SYS_MODULE`; `cap_drop: ALL` + `NET_ADMIN`
