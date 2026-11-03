@@ -35,7 +35,8 @@ type ServerConfig struct {
 	// CORSOrigins lists allowed browser origins. Empty defaults to localhost panel URLs.
 	// Set to ["*"] only if you intentionally allow any origin.
 	CORSOrigins []string `mapstructure:"cors_origins"`
-	// EnableDocs serves /api/docs and /api/openapi.yaml (default true).
+	// EnableDocs serves /api/docs and /api/openapi.yaml without authentication
+	// (default false; enable only for local/dev — the full API schema is exposed).
 	EnableDocs *bool `mapstructure:"enable_docs"`
 	// SubscriptionSigSecret signs time-limited subscription URLs. Empty → use api_key.
 	SubscriptionSigSecret string `mapstructure:"subscription_sig_secret"`
@@ -276,8 +277,8 @@ func Load() (*Config, error) {
 	}
 
 	if cfg.Server.EnableDocs == nil {
-		t := true
-		cfg.Server.EnableDocs = &t
+		f := false
+		cfg.Server.EnableDocs = &f
 	}
 	if len(cfg.Server.CORSOrigins) == 0 {
 		cfg.Server.CORSOrigins = []string{
@@ -356,13 +357,13 @@ func (c *Config) AutoDeactivateOnQuotaEnabled() bool {
 }
 
 // DocsEnabled reports whether OpenAPI/Swagger routes should be registered.
-// Nil EnableDocs defaults to true (Load also sets this explicitly).
+// Nil EnableDocs defaults to false (Load also sets this explicitly).
 func (c *Config) DocsEnabled() bool {
 	if c == nil {
 		return false
 	}
 	if c.Server.EnableDocs == nil {
-		return true
+		return false
 	}
 	return *c.Server.EnableDocs
 }
