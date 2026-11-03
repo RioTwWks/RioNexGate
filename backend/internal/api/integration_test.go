@@ -192,10 +192,10 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	}
 
 	body := []byte(`{"email":"client@example.com","traffic_gb":5,"expire_days":14}`)
-	req, _ = http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	authHeader(req)
-	resp, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ func TestInviteTokenRegistration(t *testing.T) {
 	base := srv.URL + "/api"
 
 	body := []byte(`{"email":"invitee@example.com","traffic_gb":5,"expire_days":14}`)
-	req, _ = http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-secret-key16")
 	resp, err := client.Do(req)
