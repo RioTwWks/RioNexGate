@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"rionexgate/internal/config"
@@ -22,12 +23,17 @@ type Manager interface {
 	Type() string
 	SetType(t string) error
 	StartStatsCollector(ctx context.Context)
+	// StatsDegraded reports whether the last stats collection could not reach
+	// the core stats API (quota then runs on the last server-side values).
+	StatsDegraded() bool
 }
 
 type manager struct {
 	cfg    *config.Config
 	db     *db.DB
 	mu     sync.RWMutex
+
+	statsDegraded atomic.Bool
 }
 
 func NewManager(cfg *config.Config, database *db.DB) Manager {
@@ -38,6 +44,10 @@ func (m *manager) Type() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.cfg.Core.Type
+}
+
+func (m *manager) StatsDegraded() bool {
+	return m.statsDegraded.Load()
 }
 
 func (m *manager) SetType(t string) error {
@@ -242,7 +252,11 @@ func (m *manager) collectStats() {
 		serverTotal := up + down
 		clientTotal, _ := m.db.ClientReportedBytesForUser(user.ID)
 		total := serverTotal
-		if clientTotal > total {
+		// Client-reported bytes are self-reported (honor system): they may raise
+		// used_bytes only when explicitly trusted via limits.trust_client_stats.
+		// Otherwise quota follows server-side core stats; when the core stats API
+		// is unreachable the counter stays at the last known server value.
+		if m.cfg.TrustClientStatsEnabled() && clientTotal > total {
 			total = clientTotal
 		}
 		if total == 0 && !gotXray && clientTotal == 0 {
@@ -272,6 +286,9 @@ func (m *manager) collectStats() {
 			reload = true
 		}
 	}
+	// Quota is enforced from server-side core stats; surface when they are
+	// unreachable so the panel can warn that limits are not being updated.
+	m.statsDegraded.Store(!xrayOK && xrayDialErr != nil)
 	if !xrayOK && xrayDialErr != nil && m.Type() == "xray" {
 		log.Printf("stats: xray gRPC unreachable at %s: %v — set core.xray.api_listen to 172.17.0.1:10085 (not 127.0.0.1) when backend runs in Docker, then reload core",
 			m.cfg.Core.Xray.APIAddress, xrayDialErr)

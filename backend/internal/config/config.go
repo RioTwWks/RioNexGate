@@ -150,6 +150,15 @@ type TelegramConfig struct {
 type LimitsConfig struct {
 	DefaultTrafficGB  int64 `mapstructure:"default_traffic_gb"`
 	DefaultExpireDays int   `mapstructure:"default_expire_days"`
+	// TrustClientStats allows RioNexTunnel client-reported bytes to raise
+	// used_bytes (honor system) when core stats are unavailable. Default false:
+	// quota follows server-side core stats only; client reports remain display-only.
+	TrustClientStats bool `mapstructure:"trust_client_stats"`
+}
+
+// TrustClientStatsEnabled reports whether client-reported traffic may count into quota.
+func (c *Config) TrustClientStatsEnabled() bool {
+	return c != nil && c.Limits.TrustClientStats
 }
 
 // IsActive reports whether stealth presets are enabled and minimally configured.

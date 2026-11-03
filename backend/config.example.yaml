@@ -120,3 +120,7 @@ telegram:
 limits:
   default_traffic_gb: 50
   default_expire_days: 30
+  # Allow client-reported (RioNexTunnel) bytes to raise used_bytes when core
+  # stats are unavailable. Self-reported = honor system; keep false so quota
+  # follows server-side core stats only.
+  trust_client_stats: false

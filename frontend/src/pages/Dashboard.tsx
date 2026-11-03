@@ -95,6 +95,12 @@ export function Dashboard() {
       />
 
       {error && <p className="alert-error">{error}</p>}
+      {stats?.stats_degraded && (
+        <p className="alert-warn">
+          Core stats API is unreachable — traffic counters and quota enforcement are running on the
+          last server-side values. Check the core container and <code>core.*.api_listen</code> settings.
+        </p>
+      )}
       {loading ? (
         <Spinner />
       ) : (

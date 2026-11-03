@@ -251,8 +251,11 @@ func (h *Handler) PostClientStats(w http.ResponseWriter, r *http.Request) {
 
 	_ = h.db.UpdateDeviceLastSeen(dc.Device.Token)
 	_ = h.db.TouchUserLastActive(dc.User.ID)
-	// Keep panel traffic counters in sync when Xray gRPC stats are unavailable.
-	_ = h.db.SyncUserUsedBytesFromClientReports(dc.User.ID)
+	// Client reports are self-reported: they count into quota only when
+	// limits.trust_client_stats is enabled; otherwise they are display-only.
+	if h.cfg.TrustClientStatsEnabled() {
+		_ = h.db.SyncUserUsedBytesFromClientReports(dc.User.ID)
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
