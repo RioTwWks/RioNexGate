@@ -273,7 +273,7 @@ func (m *manager) collectStats() {
 		}
 	}
 	if !xrayOK && xrayDialErr != nil && m.Type() == "xray" {
-		log.Printf("stats: xray gRPC unreachable at %s: %v — set core.xray.api_listen to 172.17.0.1:10085 (not 127.0.0.1) when backend runs in Docker, then reload core",
+		log.Printf("stats: xray gRPC unreachable at %s: %v — check core.xray.api_address/api_listen (compose default: xray-core:10085 / 0.0.0.0:10085; host networking: host.docker.internal:10085 / 172.17.0.1:10085), then reload core",
 			m.cfg.Core.Xray.APIAddress, xrayDialErr)
 	}
 	if reload {

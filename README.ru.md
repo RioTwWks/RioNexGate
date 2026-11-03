@@ -239,7 +239,7 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 5. `enable_docs: false` на публичных хостах
 6. Ограничить `cors_origins` URL панели
 7. Не публиковать `8080`/`3000` наружу (в compose только `127.0.0.1`)
-8. Firewall портов ядер; stats API на loopback (`api_listen`)
+8. Firewall портов ядер; stats API Xray — во внутренней сети `core-stats` (compose по умолчанию), API sing-box/Skadi — на loopback
 9. Шифровать бэкапы: `AGE_RECIPIENT=age1... ./scripts/backup.sh`
 10. `./data` принадлежит uid `1000` (non-root backend)
 11. Ротация API key в Settings; для шаринга — signed subscription link
@@ -296,8 +296,8 @@ core:
   stats_poll_seconds: 60
   xray:
     config_path: "./data/xray/config.json"
-    api_address: "host.docker.internal:10085"  # backend → host stats
-    api_listen: "127.0.0.1:10085"               # bind Xray (не 0.0.0.0 по умолчанию)
+    api_address: "xray-core:10085"   # backend → xray-core через внутреннюю сеть core-stats
+    api_listen: "0.0.0.0:10085"        # безопасно: порт не опубликован, сети изолированы
   singbox:
     config_path: "./data/sing-box/config.json"
     api_address: "127.0.0.1:9090"
@@ -429,7 +429,7 @@ AGE_IDENTITY=~/.config/age/key.txt ./scripts/restore.sh backups/rionexgate-data-
 | `api_key is missing or insecure` | Задайте длинный случайный `server.api_key` (или `make init` на свежем конфиге) |
 | backend не пишет в `./data` | `sudo chown -R 1000:1000 data` |
 | `make dev` не видит docker | Перелогиниться после `usermod`; `make` использует `sg docker` как fallback |
-| xray stats не работают | `make dev-cores`; при необходимости задайте `core.xray.api_listen` |
+| xray stats не работают | `make dev-cores`; проверьте `core.xray.api_address: xray-core:10085` и общую сеть `core-stats` у backend/xray-core |
 
 Диагностика: `make docker-doctor`
 

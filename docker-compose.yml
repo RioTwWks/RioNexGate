@@ -22,7 +22,13 @@ services:
       - CONFIG_PATH=/app/config.yaml
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
     extra_hosts:
+      # Legacy only: reach a host-networked core's stats API via the docker0
+      # gateway. Not needed with the default xray-core bridge setup below.
       - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      # Internal backend <-> xray-core stats channel (see networks below).
+      - core-stats
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
@@ -106,16 +112,39 @@ services:
         XRAY_VERSION: ${XRAY_VERSION:-26.3.27}
     image: rionexgate-xray:${XRAY_VERSION:-26.3.27}
     pull_policy: if_not_present
+    # Non-root: uid 1000 matches the backend so it can read the 0600 configs
+    # the panel writes under ./data/xray. Privileged ports need no root:
+    # Docker >= 20.03 sets ip_unprivileged_port_start=0 inside container netns,
+    # and NET_BIND_SERVICE (ambient, Docker >= 20.10) covers older runtimes.
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     volumes:
-      - ./data/xray:/etc/xray
+      # :ro — only the backend (host side) rewrites config.json; the container
+      # still sees mtime changes for the reload watcher.
+      - ./data/xray:/etc/xray:ro
       - ./data/xray/logs:/var/log/xray
     restart: unless-stopped
-    network_mode: host
-    # Binds stealth inbounds on host ports 443 (XHTTP+Reality) and 8443 (Vision+Reality).
-    # Requires core.stealth in config.yaml; may need cap_net_bind_service for port 443.
-    # Runs as root for privileged ports — keep host firewall tight.
+    # Bridge networking instead of host: stealth inbounds are published
+    # explicitly (DNAT preserves the real client source IP), and the Xray
+    # stats API is reachable only from the backend via the internal
+    # "core-stats" network — no unauthenticated listener on the host docker0
+    # gateway (172.17.0.1) anymore.
+    ports:
+      - "${XRAY_XHTTP_PORT:-443}:443"     # XHTTP+Reality (core.stealth.xhttp.port)
+      - "${XRAY_VISION_PORT:-8443}:8443"  # Vision+Reality (core.stealth.vision.port)
+      # TLS preset: - "${XRAY_TLS_PORT:-2053}:2053"
+    networks:
+      # Internet egress for proxied traffic; no other service attaches here.
+      - core-egress
+      - core-stats
 
   sing-box:
     profiles: ["cores"]
@@ -165,3 +194,11 @@ services:
     volumes: ["./data/awg:/etc/amneziawg"]
     ports: ["${AWG_PORT:-51820}:51820/udp"]
     restart: unless-stopped
+
+networks:
+  # xray-core-only egress: the core reaches the internet through this bridge;
+  # nothing else is attached, so no other container can reach the core.
+  core-egress:
+  # backend <-> xray-core stats API only; internal = no external connectivity.
+  core-stats:
+    internal: true

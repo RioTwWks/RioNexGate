@@ -131,7 +131,7 @@ See [`backend/internal/core/templates/xray.json.tmpl`](../backend/internal/core/
 | **8080** | TCP | Local / debug | Backend API direct | Not required externally when nginx proxies `/api` |
 | **8443** (example) | TCP | RU → EU | Exit relay inbound | Match exit node `port` and EU Xray inbound; Vision is common |
 | **443** (alternate) | TCP | RU → EU | Exit relay inbound | Use if EU listens on 443 instead of 8443 |
-| **10085** | TCP | Docker internal | Xray stats API | `core.xray.api_address`; not client-facing |
+| **10085** | TCP | Docker internal (`core-stats` net) | Xray stats API | `core.xray.api_address`; backend ↔ xray-core only, not client-facing |
 
 ### Firewall rules (minimum)
 
@@ -284,7 +284,7 @@ core:
   xray:
     config_path: "./data/xray/config.json"
     binary_path: "/usr/local/bin/xray"
-    api_address: "host.docker.internal:10085"
+    api_address: "xray-core:10085"
 
   stealth:
     enabled: true
@@ -391,7 +391,7 @@ core:
   xray:
     config_path: "./data/xray/config.json"
     binary_path: "/usr/local/bin/xray"
-    api_address: "host.docker.internal:10085"
+    api_address: "xray-core:10085"
 
   stealth:
     enabled: true
