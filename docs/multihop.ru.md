@@ -131,7 +131,7 @@ ASCII-эквивалент:
 | **8080** | TCP | Локально / отладка | Backend API напрямую | Не нужен снаружи при проксировании nginx `/api` |
 | **8443** (пример) | TCP | RU → EU | Exit relay inbound | Совпадает с `port` exit-узла и EU inbound; Vision типичен |
 | **443** (альтернатива) | TCP | RU → EU | Exit relay inbound | Если EU слушает 443 вместо 8443 |
-| **10085** | TCP | Docker internal | Xray stats API | `core.xray.api_address`; не для клиентов |
+| **10085** | TCP | Docker internal (сеть `core-stats`) | Xray stats API | `core.xray.api_address`; только backend ↔ xray-core, не для клиентов |
 
 ### Минимальные правила файрвола
 
@@ -284,7 +284,7 @@ core:
   xray:
     config_path: "./data/xray/config.json"
     binary_path: "/usr/local/bin/xray"
-    api_address: "host.docker.internal:10085"
+    api_address: "xray-core:10085"
 
   stealth:
     enabled: true
@@ -391,7 +391,7 @@ core:
   xray:
     config_path: "./data/xray/config.json"
     binary_path: "/usr/local/bin/xray"
-    api_address: "host.docker.internal:10085"
+    api_address: "xray-core:10085"
 
   stealth:
     enabled: true
@@ -997,7 +997,6 @@ func ResolveClientEndpoint(publicHost string, listenPort int, user models.User, 
 ### Что видит DPI
 
 - **Клиент ↔ RU:** трафик Reality, имитирующий TLS к CDN.
-- **RU ↔ EU:** серверный VLESS (часто тоже Reality) — не виден клиентскому DPI.
 - **Сайты:** IP EU-сервера как источник.
 
 ---
