@@ -23,13 +23,18 @@ import (
 
 func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	t.Helper()
+	return setupTestServerWith(t, nil)
+}
+
+func setupTestServerWith(t *testing.T, mutate func(*config.Config)) (*httptest.Server, *db.DB) {
+	t.Helper()
 
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 	xrayPath := filepath.Join(dir, "xray", "config.json")
 
 	cfg := &config.Config{
-		Server: config.ServerConfig{Port: 8080, APIKey: "test-secret-key16"},
+		Server:   config.ServerConfig{Port: 8080, APIKey: "test-secret-key16"},
 		Database: config.DatabaseConfig{Path: dbPath},
 		Core: config.CoreConfig{
 			Type:       "xray",
@@ -42,6 +47,9 @@ func setupTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 			StatsPoll: 60,
 		},
 		Limits: config.LimitsConfig{DefaultTrafficGB: 10, DefaultExpireDays: 7},
+	}
+	if mutate != nil {
+		mutate(cfg)
 	}
 
 	database, err := db.Open(dbPath)
@@ -184,10 +192,10 @@ func TestRioNexTunnelClientFlow(t *testing.T) {
 	}
 
 	body := []byte(`{"email":"client@example.com","traffic_gb":5,"expire_days":14}`)
-	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req, _ = http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	authHeader(req)
-	resp, err := client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,7 +400,7 @@ func TestInviteTokenRegistration(t *testing.T) {
 	base := srv.URL + "/api"
 
 	body := []byte(`{"email":"invitee@example.com","traffic_gb":5,"expire_days":14}`)
-	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req, _ = http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-secret-key16")
 	resp, err := client.Do(req)
@@ -450,4 +458,88 @@ func TestInviteTokenRegistration(t *testing.T) {
 		t.Fatal("expected invite reuse to fail")
 	}
 	resp.Body.Close()
+}
+
+// TestClientStatsQuotaTrust verifies that client-reported bytes do NOT raise
+// used_bytes by default (honor system), and do when limits.trust_client_stats
+// is explicitly enabled (issue #47).
+func TestClientStatsQuotaTrust(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("sqlite requires CGO")
+	}
+
+	reportStats := func(t *testing.T, srv *httptest.Server, database *db.DB) int64 {
+		t.Helper()
+		client := &http.Client{Timeout: 5 * time.Second}
+		base := srv.URL + "/api"
+
+		req, _ := http.NewRequest(http.MethodPost, base+"/users",
+			bytes.NewReader([]byte(`{"email":"quota@example.com","traffic_gb":50,"expire_days":30}`)))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-secret-key16")
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var user struct {
+			ID uint `json:"id"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+
+		regBody := []byte(`{"user_id":` + strconv.FormatUint(uint64(user.ID), 10) + `,"label":"phone"}`)
+		req, _ = http.NewRequest(http.MethodPost, base+"/client/register", bytes.NewReader(regBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-secret-key16")
+		resp, err = client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var reg struct {
+			DeviceToken string `json:"device_token"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&reg); err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+
+		statsBody := []byte(`{"session_id":"sess-quota","bytes_in":1000,"bytes_out":2000,"status":"connected"}`)
+		req, _ = http.NewRequest(http.MethodPost, base+"/client/stats", bytes.NewReader(statsBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Device-Token", reg.DeviceToken)
+		resp, err = client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("stats: expected 200, got %d", resp.StatusCode)
+		}
+
+		u, err := database.GetUser(user.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u.UsedBytes
+	}
+
+	// Default (trust off): self-reported bytes must not raise the quota counter.
+	srvOff, dbOff := setupTestServerWith(t, nil)
+	if got := reportStats(t, srvOff, dbOff); got != 0 {
+		srvOff.Close()
+		t.Fatalf("trust off: expected used_bytes 0, got %d", got)
+	}
+	srvOff.Close()
+
+	// Trust on: legacy behaviour — client reports raise used_bytes.
+	srvOn, dbOn := setupTestServerWith(t, func(cfg *config.Config) {
+		cfg.Limits.TrustClientStats = true
+	})
+	if got := reportStats(t, srvOn, dbOn); got != 3000 {
+		srvOn.Close()
+		t.Fatalf("trust on: expected used_bytes 3000, got %d", got)
+	}
+	srvOn.Close()
 }
