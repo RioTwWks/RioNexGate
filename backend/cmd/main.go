@@ -58,6 +58,12 @@ func runServer() error {
 		return err
 	}
 
+	if cfg.Server.PublicBaseURL == "" {
+		log.Printf("warning: server.public_base_url is not set; generated subscription links derive scheme/host " +
+			"from request headers (Host, X-Forwarded-Proto) — set public_base_url (and optionally " +
+			"server.allowed_hosts) for production")
+	}
+
 	database, err := db.Open(cfg.Database.Path)
 	if err != nil {
 		return err

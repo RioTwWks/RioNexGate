@@ -24,6 +24,9 @@ type ServerConfig struct {
 	APIKey           string `mapstructure:"api_key"`
 	PublicBaseURL    string `mapstructure:"public_base_url"`
 	ClientSOCKS5Port int    `mapstructure:"client_socks5_port"`
+	// AllowedHosts whitelists Host values that may be used to build absolute links
+	// from request headers when public_base_url is not set. Empty = any host (legacy).
+	AllowedHosts []string `mapstructure:"allowed_hosts"`
 	// RegistrationSecret, when set, allows POST /api/client/register with
 	// header X-Registration-Secret (for RioNexTunnel without exposing the admin API key).
 	RegistrationSecret string `mapstructure:"registration_secret"`
