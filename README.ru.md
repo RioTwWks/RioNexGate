@@ -88,6 +88,8 @@ make migrate
 
 Войдите в панель с API-ключом из `backend/config.yaml` → `server.api_key`.
 
+> **Plain HTTP — только для localhost.** Перед публикацией панели в сеть обязательно выполните шаг [HTTPS](#https-lets-encrypt) ниже — это обязательная часть установки, а не опция: админский API-ключ и все subscription/device-токены иначе передаются открытым текстом. Нет публичного домена? `./scripts/selfsigned.sh` сгенерирует self-signed сертификат для LAN/тестов.
+
 Опционально — поднять ядра xray/sing-box:
 
 ```bash
@@ -211,13 +213,19 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 
 ## HTTPS (Let's Encrypt)
 
-Пример настройки TLS для nginx:
+**Обязательно для любого развёртывания за пределами localhost** — по plain HTTP админский API-ключ и токены уязвимы для MITM.
+
+Настройка TLS для nginx:
 
 1. Убедитесь, что домен указывает на сервер и порт 80 свободен.
 2. Получите сертификат:
    ```bash
    chmod +x scripts/letsencrypt.sh
    ./scripts/letsencrypt.sh panel.example.com
+   ```
+   Нет публичного домена (панель только в LAN/VPN)? Сгенерируйте self-signed сертификат (клиенты покажут предупреждение о доверии):
+   ```bash
+   ./scripts/selfsigned.sh panel.lan
    ```
 3. Включите HTTPS-конфиг nginx:
    ```bash
@@ -233,7 +241,7 @@ curl -H "X-API-Key: YOUR_KEY" "http://localhost:8888/api/users/1/link?all=true"
 Перед публикацией панели за пределы localhost:
 
 1. Сильный `server.api_key` (мин. 16 символов; плейсхолдеры отклоняются) — `make init` генерирует ключ
-2. Предпочтительно HTTPS (`nginx-https.conf.example` + Let's Encrypt)
+2. HTTPS обязателен за пределами localhost (`nginx-https.conf.example` + Let's Encrypt или `scripts/selfsigned.sh` для LAN-панелей)
 3. `allow_open_register: false`; для register — `X-API-Key` или `registration_secret`
 4. `allow_private_probes: false`, если не нужен LAN multihop health-check
 5. `enable_docs: false` на публичных хостах

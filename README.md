@@ -88,6 +88,8 @@ make migrate
 
 Sign in to the panel with the API key from `backend/config.yaml` → `server.api_key`.
 
+> **Plain HTTP is for localhost only.** Before exposing the panel to any network, complete the [HTTPS](#https-lets-encrypt) step below — it is a required part of the setup, not an option: the admin API key and all subscription/device tokens are otherwise sent in cleartext. No public domain yet? `./scripts/selfsigned.sh` generates a self-signed certificate for LAN/testing.
+
 Optional — start xray/sing-box cores:
 
 ```bash
@@ -211,13 +213,19 @@ For **Try it out** in Swagger UI, use the key from `localStorage` (`rionexgate_a
 
 ## HTTPS (Let's Encrypt)
 
-Example TLS setup for nginx:
+**Required for any deployment beyond localhost** — plain HTTP exposes the admin API key and tokens to MITM.
+
+TLS setup for nginx:
 
 1. Ensure the domain points to the server and port 80 is free.
 2. Obtain a certificate:
    ```bash
    chmod +x scripts/letsencrypt.sh
    ./scripts/letsencrypt.sh panel.example.com
+   ```
+   No public domain (LAN/VPN-only panel)? Generate a self-signed certificate instead (clients will show a trust warning):
+   ```bash
+   ./scripts/selfsigned.sh panel.lan
    ```
 3. Enable HTTPS nginx config:
    ```bash
@@ -233,7 +241,7 @@ See comments in [`nginx/nginx-https.conf.example`](nginx/nginx-https.conf.exampl
 Before exposing the panel beyond localhost:
 
 1. Strong `server.api_key` (min 16 chars; placeholders are rejected at startup) — `make init` generates one
-2. Prefer HTTPS (`nginx-https.conf.example` + Let's Encrypt)
+2. HTTPS is required beyond localhost (`nginx-https.conf.example` + Let's Encrypt, or `scripts/selfsigned.sh` for LAN-only panels)
 3. Keep `allow_open_register: false`; use `X-API-Key` or `registration_secret` for device register
 4. Keep `allow_private_probes: false` unless you need LAN multihop health checks
 5. Set `enable_docs: false` on internet-facing hosts
