@@ -24,4 +24,5 @@ export interface StatsPoint {
 export interface TotalStats {
   total_used_gb: number;
   points: StatsPoint[];
+  stats_degraded?: boolean;
 }
