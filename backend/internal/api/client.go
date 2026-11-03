@@ -45,8 +45,12 @@ type StatsRequest struct {
 	Status    string `json:"status"`
 }
 
-func (h *Handler) subscriptionURL(r *http.Request, token string) string {
-	return h.publicBase(r) + "/api/subscription/" + token
+func (h *Handler) subscriptionURL(r *http.Request, token string) (string, error) {
+	base, err := h.publicBase(r)
+	if err != nil {
+		return "", err
+	}
+	return base + "/api/subscription/" + token, nil
 }
 
 func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +146,13 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	subURL, err := h.subscriptionURL(r, subToken)
+	if err != nil {
+		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	device, err := h.db.CreateDevice(user.ID, label)
 	if err != nil {
 		atomic.AddInt64(&h.metrics.RegistrationFails, 1)
@@ -160,7 +171,7 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, RegisterResponse{
 		DeviceToken:     device.Token,
-		SubscriptionURL: h.subscriptionURL(r, subToken),
+		SubscriptionURL: subURL,
 	})
 }
 

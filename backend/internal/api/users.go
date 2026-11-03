@@ -53,7 +53,9 @@ func (h *Handler) enrichUserDTO(r *http.Request, dto UserDTO) UserDTO {
 		}
 	}
 	if dto.SubscriptionToken != "" {
-		dto.SubscriptionURL = h.subscriptionURL(r, dto.SubscriptionToken)
+		if url, err := h.subscriptionURL(r, dto.SubscriptionToken); err == nil {
+			dto.SubscriptionURL = url
+		}
 	}
 	if rows, err := h.db.ListUserExits(dto.ID); err == nil && len(rows) > 0 {
 		ids := make([]uint, 0, len(rows))

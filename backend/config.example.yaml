@@ -2,6 +2,14 @@ server:
   port: 8080
   # REQUIRED: long random value (min 16 chars). Placeholders like change-me-to-secure-key are rejected at startup.
   api_key: "change-me-to-secure-key"   # same key used in the web panel
+  # RECOMMENDED for production: absolute base URL of the panel used in generated
+  # subscription links. Without it links derive scheme/host from request headers
+  # (Host, X-Forwarded-Proto) — unsafe behind untrusted proxies.
+  # public_base_url: "https://panel.example.com"
+  # Optional whitelist of Host values allowed for header-derived links (ignored
+  # when public_base_url is set). Requests from other hosts fail instead of
+  # minting links to a spoofed host.
+  # allowed_hosts: ["panel.example.com", "127.0.0.1:8888"]
   # Optional: allow RioNexTunnel to register devices without the admin API key.
   # registration_secret: "long-random-registration-secret"
   # DANGEROUS: unauthenticated POST /api/client/register (LAN/dev only).

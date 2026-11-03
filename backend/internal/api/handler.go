@@ -1,6 +1,8 @@
 package api
 
 import (
+	"sync"
+
 	"rionexgate/internal/config"
 	"rionexgate/internal/core"
 	"rionexgate/internal/db"
@@ -12,6 +14,9 @@ type Handler struct {
 	cfg      *config.Config
 	commands *CommandManager
 	metrics  ClientMetrics
+
+	// publicBaseWarnOnce limits the "public_base_url not set" warning to one log line.
+	publicBaseWarnOnce sync.Once
 }
 
 func NewHandler(database *db.DB, coreMgr core.Manager, cfg *config.Config) *Handler {
