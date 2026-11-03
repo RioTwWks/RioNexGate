@@ -274,6 +274,11 @@ func Load() (*Config, error) {
 	if err := ValidateAPIKey(cfg.Server.APIKey); err != nil {
 		return nil, err
 	}
+	if isSkadiCoreType(cfg.Core.Type) {
+		if err := ValidateSkadiToken(cfg.Core.Skadi.APIToken); err != nil {
+			return nil, err
+		}
+	}
 
 	if cfg.Server.EnableDocs == nil {
 		t := true
@@ -389,6 +394,41 @@ func ValidateAPIKey(key string) error {
 	}
 	if len(key) < 16 {
 		return fmt.Errorf("server.api_key is too short (minimum 16 characters)")
+	}
+	return nil
+}
+
+// isSkadiCoreType reports whether the configured core type selects SkadiCore.
+func isSkadiCoreType(t string) bool {
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "skadi", "skadicore", "skadi-core":
+		return true
+	default:
+		return false
+	}
+}
+
+// insecureSkadiTokens are placeholder/default Skadi API tokens that must never
+// protect a running SkadiCore gRPC API. "rionexgate-skadi-api" is the implicit
+// default emitted by the config generator when the token is left empty.
+var insecureSkadiTokens = map[string]struct{}{
+	"":                          {},
+	"change-me":                 {},
+	"change-me-skadi-api-token": {},
+	"rionexgate-skadi-api":      {},
+}
+
+// ValidateSkadiToken rejects empty and well-known insecure Skadi API tokens.
+// Test configs may set RIONEXGATE_ALLOW_INSECURE_API_KEY=1 to bypass.
+func ValidateSkadiToken(token string) error {
+	if os.Getenv("RIONEXGATE_ALLOW_INSECURE_API_KEY") == "1" {
+		return nil
+	}
+	if _, bad := insecureSkadiTokens[token]; bad {
+		return fmt.Errorf("core.skadi.api_token is missing or insecure; set a long random value in config.yaml (refusing placeholders like change-me-skadi-api-token)")
+	}
+	if len(token) < 16 {
+		return fmt.Errorf("core.skadi.api_token is too short (minimum 16 characters)")
 	}
 	return nil
 }

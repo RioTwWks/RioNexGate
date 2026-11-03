@@ -81,8 +81,8 @@ func TestAPIE2E_UserCRUDAndLinks(t *testing.T) {
 		t.Fatalf("health: expected 200, got %d", resp.StatusCode)
 	}
 
-	// openapi + docs
-	for _, path := range []string{"/openapi.yaml", "/docs"} {
+	// openapi + docs (assets vendored locally, no CDN)
+	for _, path := range []string{"/openapi.yaml", "/docs", "/docs/swagger-ui.css", "/docs/swagger-ui-bundle.js"} {
 		resp, err = http.Get(base + path)
 		if err != nil {
 			t.Fatal(err)
@@ -450,4 +450,73 @@ func TestInviteTokenRegistration(t *testing.T) {
 		t.Fatal("expected invite reuse to fail")
 	}
 	resp.Body.Close()
+}
+
+// TestSubscriptionResponsesUnified guards against user enumeration:
+// an expired/inactive subscription must return the exact same response
+// as an unknown token.
+func TestSubscriptionResponsesUnified(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("sqlite requires CGO")
+	}
+
+	srv, database := setupTestServer(t)
+	defer srv.Close()
+
+	client := &http.Client{}
+	base := srv.URL + "/api"
+	authHeader := func(req *http.Request) {
+		req.Header.Set("X-API-Key", "test-secret-key16")
+	}
+
+	body := []byte(`{"email":"unified@example.com","traffic_gb":5,"expire_days":14}`)
+	req, _ := http.NewRequest(http.MethodPost, base+"/users", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	authHeader(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var user struct {
+		ID uint `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	u, err := database.GetUser(user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Expire the user.
+	past := time.Now().Add(-time.Hour)
+	if err := database.Model(&models.User{}).Where("id = ?", user.ID).Update("expires_at", past).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	get := func(token string) (int, string) {
+		resp, err := http.Get(base + "/subscription/" + token)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp.StatusCode, string(b)
+	}
+
+	expiredStatus, expiredBody := get(u.SubscriptionToken)
+	unknownStatus, unknownBody := get("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+
+	if expiredStatus != unknownStatus || expiredBody != unknownBody {
+		t.Fatalf("responses differ: expired=(%d %q) unknown=(%d %q)",
+			expiredStatus, expiredBody, unknownStatus, unknownBody)
+	}
+	if expiredStatus != http.StatusNotFound {
+		t.Fatalf("expected unified 404, got %d", expiredStatus)
+	}
 }

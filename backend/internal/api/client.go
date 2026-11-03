@@ -336,13 +336,16 @@ func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.AccessAllowed() {
-		msg := "subscription inactive"
+		// Reply exactly as for an unknown token: a 403/404 split would leak
+		// token validity (user enumeration). Details go to the server log.
+		reason := "inactive"
 		if user.IsExpired() {
-			msg = "subscription expired"
+			reason = "expired"
 		} else if user.IsQuotaExceeded() {
-			msg = "traffic quota exceeded"
+			reason = "quota exceeded"
 		}
-		writeError(w, http.StatusForbidden, msg)
+		log.Printf("subscription denied for user %d: %s", user.ID, reason)
+		writeError(w, http.StatusNotFound, "subscription not found")
 		return
 	}
 

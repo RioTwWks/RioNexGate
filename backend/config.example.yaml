@@ -33,7 +33,7 @@ core:
     binary_path: "/usr/local/bin/xray"
     # Where the backend container connects for stats (host-gateway from bridge network).
     api_address: "host.docker.internal:10085"
-    # Bind address written into Xray config. MUST be reachable from the backend container.
+    # Bind address written into the generated Xray config. MUST be reachable from the backend container.
     # Use docker0 (172.17.0.1), NOT 127.0.0.1 — loopback is invisible across Docker bridge.
     # With api_address=host.docker.internal, empty/127.0.0.1 is auto-rewritten to 172.17.0.1.
     api_listen: "172.17.0.1:10085"
@@ -45,6 +45,8 @@ core:
     config_path: "./data/skadi/skadi.toml"
     binary_path: "/usr/local/bin/skadicore"
     api_address: "127.0.0.1:10086"              # Skadi gRPC (loopback only)
+    # REQUIRED when core.type=skadi: long random token; the panel refuses to
+    # start with empty/placeholder values (min 16 chars).
     api_token: "change-me-skadi-api-token"
     metrics_address: "127.0.0.1:9091"            # optional Prometheus /healthz
 

@@ -125,12 +125,19 @@ func (h *Handler) TestStealthDest(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(dest, ":") {
 		dest += ":443"
 	}
-	host, _, err := net.SplitHostPort(dest)
+	host, port, err := net.SplitHostPort(dest)
 	if err != nil {
 		host = dest
-		if idx := strings.Index(dest, ":"); idx > 0 {
+		port = "443"
+		if idx := strings.LastIndex(dest, ":"); idx > 0 {
 			host = dest[:idx]
+			if p := dest[idx+1:]; p != "" {
+				port = p
+			}
 		}
+	}
+	if port == "" {
+		port = "443"
 	}
 	allowPrivate := h.cfg.Server.AllowPrivateProbes
 	if err := netutil.ValidateHost(r.Context(), host, allowPrivate); err != nil {
@@ -152,7 +159,7 @@ func (h *Handler) TestStealthDest(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
-	url := "https://" + host
+	url := "https://" + net.JoinHostPort(host, port)
 	reqHTTP, err := http.NewRequestWithContext(r.Context(), http.MethodHead, url, nil)
 	if err != nil {
 		writeJSON(w, http.StatusOK, DestTestResponse{Reachable: false, Error: err.Error()})
