@@ -10,8 +10,9 @@ server:
   allow_private_probes: false
   # Browser CORS origins (default: localhost panel). Use ["*"] only if intentional.
   # cors_origins: ["http://localhost:8888", "http://127.0.0.1:8888"]
-  # Serve /api/docs and /api/openapi.yaml (disable on internet-facing hosts).
-  enable_docs: true
+  # Serve /api/docs and /api/openapi.yaml WITHOUT authentication (default false).
+  # The full API schema aids reconnaissance — enable only for local/dev.
+  enable_docs: false
   # Optional separate HMAC secret for signed subscription URLs (default: api_key).
   # subscription_sig_secret: ""
   subscription_default_ttl_hours: 168

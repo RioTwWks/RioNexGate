@@ -57,6 +57,10 @@ func runServer() error {
 	if err != nil {
 		return err
 	}
+	if cfg.DocsEnabled() {
+		log.Printf("warning: /api/docs and /api/openapi.yaml are exposed WITHOUT authentication "+
+			"(server.enable_docs=true); the full API schema aids reconnaissance — disable on internet-facing hosts")
+	}
 
 	database, err := db.Open(cfg.Database.Path)
 	if err != nil {
