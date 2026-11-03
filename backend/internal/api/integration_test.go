@@ -81,8 +81,8 @@ func TestAPIE2E_UserCRUDAndLinks(t *testing.T) {
 		t.Fatalf("health: expected 200, got %d", resp.StatusCode)
 	}
 
-	// openapi + docs
-	for _, path := range []string{"/openapi.yaml", "/docs"} {
+	// openapi + docs (assets vendored locally, no CDN)
+	for _, path := range []string{"/openapi.yaml", "/docs", "/docs/swagger-ui.css", "/docs/swagger-ui-bundle.js"} {
 		resp, err = http.Get(base + path)
 		if err != nil {
 			t.Fatal(err)
