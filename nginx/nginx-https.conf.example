@@ -1,7 +1,8 @@
 # HTTPS example for rionexgate nginx reverse proxy (non-root, ports 8080/8443).
 #
 # Usage:
-#   1. Obtain certificates (see scripts/letsencrypt.sh)
+#   1. Obtain certificates: scripts/letsencrypt.sh (public hosts, trusted)
+#      OR scripts/selfsigned.sh (LAN/testing; clients show a trust warning)
 #   2. Copy certs to data/nginx/ssl/:
 #        fullchain.pem
 #        privkey.pem
@@ -10,6 +11,8 @@
 #      Host mapping is host:8443 -> container:8443 (non-root listen).
 #
 # HTTP requests are redirected to HTTPS.
+# Plain HTTP is acceptable only on localhost — the admin API key and
+# subscription/device tokens are otherwise sent in cleartext.
 
 pid /tmp/nginx.pid;
 

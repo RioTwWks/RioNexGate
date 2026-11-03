@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -56,6 +57,13 @@ func runServer() error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
+	}
+
+	if u := strings.ToLower(strings.TrimSpace(cfg.Server.PublicBaseURL)); u == "" || strings.HasPrefix(u, "http://") {
+		log.Printf("warning: panel appears to be served over plain HTTP (server.public_base_url=%q); "+
+			"the admin API key and subscription/device tokens then travel in cleartext — enable TLS "+
+			"(nginx/nginx-https.conf.example + scripts/letsencrypt.sh, or scripts/selfsigned.sh for LAN); "+
+			"if nginx already terminates TLS, set public_base_url to the https URL to silence this", cfg.Server.PublicBaseURL)
 	}
 
 	database, err := db.Open(cfg.Database.Path)
